@@ -26,11 +26,11 @@ type GameControlHost struct {
 
 // GameControlConfig represents the settings and current status for GameControl.
 type GameControlConfig struct {
-	Enabled      bool              `json:"enabled" yaml:"enabled"`
-	UpstreamURL  string            `json:"upstream_url" yaml:"upstream_url"`
-	RangeStart   string            `json:"range_start" yaml:"range_start"`
-	RangeEnd     string            `json:"range_end" yaml:"range_end"`
-	BlockedHosts map[string]bool   `json:"blocked_hosts" yaml:"blocked_hosts"` // IP -> blocked state
+	Enabled      bool            `json:"enabled" yaml:"enabled"`
+	UpstreamURL  string          `json:"upstream_url" yaml:"upstream_url"`
+	RangeStart   string          `json:"range_start" yaml:"range_start"`
+	RangeEnd     string          `json:"range_end" yaml:"range_end"`
+	BlockedHosts map[string]bool `json:"blocked_hosts" yaml:"blocked_hosts"` // IP -> blocked state
 }
 
 type gameControlManager struct {
@@ -150,7 +150,6 @@ func handleGameControlUpdateHost(w http.ResponseWriter, r *http.Request) {
 	gameControlgameControlMgr.conf.BlockedHosts[req.IP] = req.Blocked
 	gameControlgameControlMgr.mu.Unlock()
 
-
 	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
 }
 
@@ -177,12 +176,11 @@ func handleGameControlToggleAll(w http.ResponseWriter, r *http.Request) {
 	}
 	gameControlgameControlMgr.mu.Unlock()
 
-
 	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
 }
 
 type updateConfigReq struct {
-	Enabled     *bool   `json:"enabled,omitempty"`
+	Enabled     *bool  `json:"enabled,omitempty"`
 	UpstreamURL string `json:"upstream_url,omitempty"`
 	RangeStart  string `json:"range_start,omitempty"`
 	RangeEnd    string `json:"range_end,omitempty"`
@@ -210,7 +208,6 @@ func handleGameControlUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		gameControlgameControlMgr.conf.RangeEnd = strings.TrimSpace(req.RangeEnd)
 	}
 	gameControlgameControlMgr.mu.Unlock()
-
 
 	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
 }

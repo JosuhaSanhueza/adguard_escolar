@@ -135,10 +135,10 @@ type configuration struct {
 
 	// TODO(a.garipov): Make DNS and the fields below pointers and validate
 	// and/or reset on explicit nulling.
-	DNS      dnsConfig         `yaml:"dns"`
-	TLS      tlsConfigSettings `yaml:"tls"`
-	QueryLog queryLogConfig    `yaml:"querylog"`
-	Stats    statsConfig       `yaml:"statistics"`
+	DNS         dnsConfig          `yaml:"dns"`
+	TLS         tlsConfigSettings  `yaml:"tls"`
+	QueryLog    queryLogConfig     `yaml:"querylog"`
+	Stats       statsConfig        `yaml:"statistics"`
 	GameControl *GameControlConfig `yaml:"gamecontrol,omitempty"`
 
 	// Filters reflects the filters from [filtering.Config].  It's cloned to the
@@ -727,14 +727,7 @@ func parseConfig(ctx context.Context, l *slog.Logger, workDir, confPath string) 
 		return err
 	}
 
-	if config.GameControl != nil {
-		gameControlgameControlMgr.mu.Lock()
-		gameControlgameControlMgr.conf = *config.GameControl
-		if gameControlgameControlMgr.conf.BlockedHosts == nil {
-			gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
-		}
-		gameControlgameControlMgr.mu.Unlock()
-	}
+	loadGameControlConfig()
 
 	err = validateConfig(ctx, l, config.fileData)
 	if err != nil {
@@ -747,6 +740,21 @@ func parseConfig(ctx context.Context, l *slog.Logger, workDir, confPath string) 
 
 	// Do not wrap the error because it's informative enough as is.
 	return validateTLSCipherIDs(config.TLS.OverrideTLSCiphers)
+}
+
+// loadGameControlConfig loads GameControl settings into manager if present.
+func loadGameControlConfig() {
+	if config.GameControl == nil {
+		return
+	}
+
+	gameControlgameControlMgr.mu.Lock()
+	defer gameControlgameControlMgr.mu.Unlock()
+
+	gameControlgameControlMgr.conf = *config.GameControl
+	if gameControlgameControlMgr.conf.BlockedHosts == nil {
+		gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
+	}
 }
 
 // logIPHint logs an informational message when the config contains an unquoted
