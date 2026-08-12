@@ -28,10 +28,10 @@ const (
 // TODO(a.garipov): Find out if we can get GOARM and GOMIPS values the same way
 // we can GOARCH and GOOS.
 var (
-	channel    string = ChannelDevelopment
+	channel    string = ChannelRelease
 	goarm      string
 	gomips     string
-	version    string
+	version    string = "v1.0.0"
 	committime string
 )
 
