@@ -175,6 +175,16 @@ func (s *Server) updateStats(dctx *dnsContext, clientIP string, processingTime t
 		filtering.FilteredInvalid,
 		filtering.FilteredBlockedService:
 		e.Result = stats.RFiltered
+		if len(dctx.result.Rules) > 0 {
+			fid := uint32(dctx.result.Rules[0].FilterListID)
+			// HaGeZi Security / Malware filters: 34, 52, 46, 54, 44, 55 (or rules from these lists)
+			// When blocked by HaGeZi, map to RSafeBrowsing for Malware Card
+			// When blocked by OISD NSFW, map to RParental for Adult Card
+			// If rule text or filter ID matches adult/nsfw or hagezi security
+			if fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 {
+				e.Result = stats.RSafeBrowsing
+			}
+		}
 	}
 
 	s.stats.Update(e)

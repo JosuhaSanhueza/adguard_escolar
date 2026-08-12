@@ -104,6 +104,59 @@ const GameControl: React.FC = () => {
                             </div>
                         </div>
 
+                        <div className="mb-4 p-3 border rounded bg-light">
+                            <h6 className="font-weight-bold mb-2">Configuración Modular de Rango de IPs / Equipos</h6>
+                            <div className="form-row align-items-center">
+                                <div className="col-auto">
+                                    <label className="sr-only" htmlFor="rangeStart">IP Inicio</label>
+                                    <div className="input-group mb-2">
+                                        <div className="input-group-prepend">
+                                            <div className="input-group-text">Inicio:</div>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            id="rangeStart"
+                                            value={status.range_start}
+                                            onChange={(e) => setStatus({ ...status, range_start: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="col-auto">
+                                    <label className="sr-only" htmlFor="rangeEnd">IP Fin</label>
+                                    <div className="input-group mb-2">
+                                        <div className="input-group-prepend">
+                                            <div className="input-group-text">Fin:</div>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            id="rangeEnd"
+                                            value={status.range_end}
+                                            onChange={(e) => setStatus({ ...status, range_end: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="col-auto">
+                                    <button
+                                        className="btn btn-primary mb-2"
+                                        onClick={async () => {
+                                            await fetch('/control/gamecontrol/config', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    range_start: status.range_start,
+                                                    range_end: status.range_end,
+                                                }),
+                                            });
+                                            fetchStatus();
+                                        }}>
+                                        Guardar Rango
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="mb-3">
                             <input
                                 type="text"
