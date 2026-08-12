@@ -198,10 +198,12 @@ const Dashboard = ({
                             blockedFiltering={stats.blockedFiltering}
                             replacedSafebrowsing={stats.replacedSafebrowsing}
                             replacedParental={stats.replacedParental}
+                            replacedGames={stats.replacedGames}
                             numDnsQueries={stats.numDnsQueries}
                             numBlockedFiltering={stats.numBlockedFiltering}
                             numReplacedSafebrowsing={stats.numReplacedSafebrowsing}
                             numReplacedParental={stats.numReplacedParental}
+                            numReplacedGames={stats.numReplacedGames}
                         />
                     </div>
 

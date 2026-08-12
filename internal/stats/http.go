@@ -46,12 +46,14 @@ type StatsResp struct {
 	BlockedFiltering     []uint64 `json:"blocked_filtering"`
 	ReplacedSafebrowsing []uint64 `json:"replaced_safebrowsing"`
 	ReplacedParental     []uint64 `json:"replaced_parental"`
+	ReplacedGames        []uint64 `json:"replaced_games"`
 
 	NumDNSQueries           uint64 `json:"num_dns_queries"`
 	NumBlockedFiltering     uint64 `json:"num_blocked_filtering"`
 	NumReplacedSafebrowsing uint64 `json:"num_replaced_safebrowsing"`
 	NumReplacedSafesearch   uint64 `json:"num_replaced_safesearch"`
 	NumReplacedParental     uint64 `json:"num_replaced_parental"`
+	NumReplacedGames        uint64 `json:"num_replaced_games"`
 
 	AvgProcessingTime float64 `json:"avg_processing_time"`
 }

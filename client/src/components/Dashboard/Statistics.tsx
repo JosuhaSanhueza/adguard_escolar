@@ -13,10 +13,12 @@ interface StatisticsProps {
     blockedFiltering: number[];
     replacedSafebrowsing: number[];
     replacedParental: number[];
+    replacedGames?: number[];
     numDnsQueries: number;
     numBlockedFiltering: number;
     numReplacedSafebrowsing: number;
     numReplacedParental: number;
+    numReplacedGames?: number;
 }
 
 const Statistics = ({
@@ -24,13 +26,15 @@ const Statistics = ({
     blockedFiltering,
     replacedSafebrowsing,
     replacedParental,
+    replacedGames = [],
     numDnsQueries,
     numBlockedFiltering,
     numReplacedSafebrowsing,
     numReplacedParental,
+    numReplacedGames = 0,
 }: StatisticsProps) => (
     <div className="row">
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-3 mb-3">
             <StatsCard
                 total={numDnsQueries}
                 lineData={dnsQueries}
@@ -43,7 +47,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-3 mb-3">
             <StatsCard
                 total={numBlockedFiltering}
                 lineData={blockedFiltering}
@@ -62,7 +66,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-3 mb-3">
             <StatsCard
                 total={numReplacedSafebrowsing}
                 lineData={replacedSafebrowsing}
@@ -92,9 +96,9 @@ const Statistics = ({
 
         <div className="col-sm-6 col-lg-3 mb-3">
             <StatsCard
-                total={numBlockedFiltering}
-                lineData={blockedFiltering}
-                percent={getPercent(numDnsQueries, numBlockedFiltering)}
+                total={numReplacedGames}
+                lineData={replacedGames}
+                percent={getPercent(numDnsQueries, numReplacedGames)}
                 title={
                     <Link to={`logs?response_status=${RESPONSE_FILTER.BLOCKED_GAMES.QUERY}`}>
                         Juegos Bloqueados

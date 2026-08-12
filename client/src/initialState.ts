@@ -202,6 +202,7 @@ export type StatsData = {
     blockedFiltering: number[];
     replacedParental: number[];
     replacedSafebrowsing: number[];
+    replacedGames: number[];
     topBlockedDomains: { name: string; count: number }[];
     topClients: {
         name: string;
@@ -215,6 +216,7 @@ export type StatsData = {
     numReplacedParental: number;
     numReplacedSafebrowsing: number;
     numReplacedSafesearch: number;
+    numReplacedGames: number;
     avgProcessingTime: number;
     timeUnits: string;
     enabled: boolean;
@@ -615,6 +617,7 @@ export const initialState: RootState = {
         blockedFiltering: [],
         replacedParental: [],
         replacedSafebrowsing: [],
+        replacedGames: [],
         topBlockedDomains: [],
         topClients: [],
         topQueriedDomains: [],
@@ -623,6 +626,7 @@ export const initialState: RootState = {
         numReplacedParental: 0,
         numReplacedSafebrowsing: 0,
         numReplacedSafesearch: 0,
+        numReplacedGames: 0,
         avgProcessingTime: 0,
         timeUnits: TIME_UNITS.HOURS,
         enabled: true,

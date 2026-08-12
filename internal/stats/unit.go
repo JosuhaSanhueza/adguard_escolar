@@ -465,13 +465,15 @@ func (s *StatsCtx) dataFromUnits(units []*unitDB, curID uint32) (resp *StatsResp
 		sum.NResult[RSafeBrowsing] += u.NResult[RSafeBrowsing]
 		sum.NResult[RSafeSearch] += u.NResult[RSafeSearch]
 		sum.NResult[RParental] += u.NResult[RParental]
+		sum.NResult[RGames] += u.NResult[RGames]
 	}
 
 	resp.NumDNSQueries = sum.NTotal
-	resp.NumBlockedFiltering = sum.NResult[RFiltered]
+	resp.NumBlockedFiltering = sum.NResult[RFiltered] + sum.NResult[RSafeBrowsing] + sum.NResult[RParental] + sum.NResult[RGames]
 	resp.NumReplacedSafebrowsing = sum.NResult[RSafeBrowsing]
 	resp.NumReplacedSafesearch = sum.NResult[RSafeSearch]
 	resp.NumReplacedParental = sum.NResult[RParental]
+	resp.NumReplacedGames = sum.NResult[RGames]
 
 	if timeN != 0 {
 		resp.AvgProcessingTime = microsecondsToSeconds(float64(sum.TimeAvg / timeN))
@@ -495,6 +497,7 @@ func (s *StatsCtx) fillCollectedStats(data *StatsResp, units []*unitDB, curID ui
 	data.BlockedFiltering = make([]uint64, size)
 	data.ReplacedSafebrowsing = make([]uint64, size)
 	data.ReplacedParental = make([]uint64, size)
+	data.ReplacedGames = make([]uint64, size)
 
 	if data.TimeUnits == timeUnitsDays {
 		s.fillCollectedStatsDaily(data, units, curID, size)
@@ -504,9 +507,10 @@ func (s *StatsCtx) fillCollectedStats(data *StatsResp, units []*unitDB, curID ui
 
 	for i, u := range units {
 		data.DNSQueries[i] += u.NTotal
-		data.BlockedFiltering[i] += u.NResult[RFiltered]
+		data.BlockedFiltering[i] += u.NResult[RFiltered] + u.NResult[RSafeBrowsing] + u.NResult[RParental] + u.NResult[RGames]
 		data.ReplacedSafebrowsing[i] += u.NResult[RSafeBrowsing]
 		data.ReplacedParental[i] += u.NResult[RParental]
+		data.ReplacedGames[i] += u.NResult[RGames]
 	}
 }
 
@@ -531,9 +535,10 @@ func (s *StatsCtx) fillCollectedStatsDaily(
 		day := i / 24
 
 		data.DNSQueries[day] += u.NTotal
-		data.BlockedFiltering[day] += u.NResult[RFiltered]
+		data.BlockedFiltering[day] += u.NResult[RFiltered] + u.NResult[RSafeBrowsing] + u.NResult[RParental] + u.NResult[RGames]
 		data.ReplacedSafebrowsing[day] += u.NResult[RSafeBrowsing]
 		data.ReplacedParental[day] += u.NResult[RParental]
+		data.ReplacedGames[day] += u.NResult[RGames]
 	}
 }
 

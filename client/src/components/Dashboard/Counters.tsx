@@ -67,6 +67,7 @@ const Counters = ({ refreshButton, subtitle }: CountersProps) => {
         numReplacedSafebrowsing,
         numReplacedParental,
         numReplacedSafesearch,
+        numReplacedGames = 0,
         avgProcessingTime,
         timeUnits,
     } = useSelector<RootState, RootState['stats']>((state) => state.stats, shallowEqual);
@@ -110,7 +111,7 @@ const Counters = ({ refreshButton, subtitle }: CountersProps) => {
         },
         {
             label: 'Juegos Bloqueados',
-            count: formatNumber(numBlockedFiltering),
+            count: formatNumber(numReplacedGames),
             tooltipTitle: 'Consultas de juegos bloqueados por GameControl o Filtro de Juegos',
             response_status: RESPONSE_FILTER.BLOCKED_GAMES.QUERY,
         },
