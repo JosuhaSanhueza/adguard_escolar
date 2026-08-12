@@ -183,6 +183,8 @@ func (web *webAPI) registerControlHandlers() {
 	web.httpReg.Register(http.MethodPost, "/control/tls/configure", web.handleTLSConfigure)
 	web.httpReg.Register(http.MethodPost, "/control/tls/validate", web.handleTLSValidate)
 
+	initGameControl(web.httpReg)
+
 	mux.Handle(
 		"/control/version.json",
 		web.postInstallHandler(http.HandlerFunc(web.handleVersionJSON)),

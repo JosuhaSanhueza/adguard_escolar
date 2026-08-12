@@ -139,6 +139,7 @@ type configuration struct {
 	TLS      tlsConfigSettings `yaml:"tls"`
 	QueryLog queryLogConfig    `yaml:"querylog"`
 	Stats    statsConfig       `yaml:"statistics"`
+	GameControl *GameControlConfig `yaml:"gamecontrol,omitempty"`
 
 	// Filters reflects the filters from [filtering.Config].  It's cloned to the
 	// config used in the filtering module at the startup.  Afterwards it's
@@ -726,6 +727,15 @@ func parseConfig(ctx context.Context, l *slog.Logger, workDir, confPath string) 
 		return err
 	}
 
+	if config.GameControl != nil {
+		gameControlgameControlMgr.mu.Lock()
+		gameControlgameControlMgr.conf = *config.GameControl
+		if gameControlgameControlMgr.conf.BlockedHosts == nil {
+			gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
+		}
+		gameControlgameControlMgr.mu.Unlock()
+	}
+
 	err = validateConfig(ctx, l, config.fileData)
 	if err != nil {
 		return err
@@ -945,6 +955,10 @@ func (c *configuration) write(
 	}
 
 	config.Clients.Persistent = globalContext.clients.forConfig()
+
+	gameControlgameControlMgr.mu.RLock()
+	config.GameControl = &gameControlgameControlMgr.conf
+	gameControlgameControlMgr.mu.RUnlock()
 
 	confPath = configFilePath(ctx, l, workDir, confPath)
 	l.DebugContext(ctx, "writing config file", "path", confPath)

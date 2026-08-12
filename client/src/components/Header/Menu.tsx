@@ -69,6 +69,10 @@ const FILTERS_ITEMS = [
         text: 'dns_allowlists',
     },
     {
+        route: FILTERS_URLS.game_control,
+        text: 'GameControl',
+    },
+    {
         route: FILTERS_URLS.dns_rewrites,
         text: 'dns_rewrites',
     },
