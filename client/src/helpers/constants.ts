@@ -155,7 +155,7 @@ export const FILTERS_URLS = {
     dns_rewrites: '/dns_rewrites',
     custom_rules: '/custom_rules',
     blocked_services: '/blocked_services',
-    game_control: '/filters/gamecontrol',
+    game_control: '/gamecontrol',
 };
 
 export const ENCRYPTION_SOURCE = {
