@@ -33,8 +33,8 @@ const Statistics = ({
     numReplacedParental,
     numReplacedGames = 0,
 }: StatisticsProps) => (
-    <div className="row">
-        <div className="col-sm-6 col-lg-3 mb-3">
+    <div className="row row-cards justify-content-center">
+        <div className="col-sm-6 col-lg-4 col-xl-20 mb-3">
             <StatsCard
                 total={numDnsQueries}
                 lineData={dnsQueries}
@@ -47,7 +47,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3 mb-3">
+        <div className="col-sm-6 col-lg-4 col-xl-20 mb-3">
             <StatsCard
                 total={numBlockedFiltering}
                 lineData={blockedFiltering}
@@ -66,7 +66,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3 mb-3">
+        <div className="col-sm-6 col-lg-4 col-xl-20 mb-3">
             <StatsCard
                 total={numReplacedSafebrowsing}
                 lineData={replacedSafebrowsing}
@@ -80,7 +80,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3 mb-3">
+        <div className="col-sm-6 col-lg-4 col-xl-20 mb-3">
             <StatsCard
                 total={numReplacedParental}
                 lineData={replacedParental}
@@ -94,7 +94,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3 mb-3">
+        <div className="col-sm-6 col-lg-4 col-xl-20 mb-3">
             <StatsCard
                 total={numReplacedGames}
                 lineData={replacedGames}
