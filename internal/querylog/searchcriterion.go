@@ -267,41 +267,13 @@ func reasonIsRewrite(r filtering.Reason) (ok bool) {
 func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason, rules []*filtering.ResultRule) (matched bool) {
 	switch c.value {
 	case filteringStatusBlocked:
-		switch reason {
-		case
-			filtering.FilteredBlockList,
-			filtering.FilteredBlockedService:
-			return true
-		default:
-			return false
-		}
+		return reason == filtering.FilteredBlockList || reason == filtering.FilteredBlockedService
 	case filteringStatusBlockedParental:
-		if reason == filtering.FilteredParental {
-			return true
-		}
-		if len(rules) > 0 {
-			rText := strings.ToLower(rules[0].Text)
-			return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
-				strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") ||
-				strings.Contains(rText, "oisd")
-		}
-		return false
+		return reason == filtering.FilteredParental || matchParentalRule(rules)
 	case filteringStatusBlockedSafebrowsing:
-		if reason == filtering.FilteredSafeBrowsing {
-			return true
-		}
-		if len(rules) > 0 {
-			rText := strings.ToLower(rules[0].Text)
-			return strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
-				strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
-		}
-		return false
+		return reason == filtering.FilteredSafeBrowsing || matchSafebrowsingRule(rules)
 	case filteringStatusBlockedGames:
-		if len(rules) > 0 {
-			rText := strings.ToLower(rules[0].Text)
-			return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
-		}
-		return false
+		return matchGamesRule(rules)
 	case filteringStatusBlockedService:
 		return reason == filtering.FilteredBlockedService
 	case filteringStatusSafeSearch:
@@ -309,6 +281,33 @@ func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason, rules []
 	default:
 		panic(fmt.Errorf("%w: %q", errors.ErrBadEnumValue, c.value))
 	}
+}
+
+func matchParentalRule(rules []*filtering.ResultRule) bool {
+	if len(rules) == 0 {
+		return false
+	}
+	rText := strings.ToLower(rules[0].Text)
+	return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
+		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") ||
+		strings.Contains(rText, "oisd")
+}
+
+func matchSafebrowsingRule(rules []*filtering.ResultRule) bool {
+	if len(rules) == 0 {
+		return false
+	}
+	rText := strings.ToLower(rules[0].Text)
+	return strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
+		strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+}
+
+func matchGamesRule(rules []*filtering.ResultRule) bool {
+	if len(rules) == 0 {
+		return false
+	}
+	rText := strings.ToLower(rules[0].Text)
+	return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
 }
 
 // reasonIsRuleList returns true if r is one of:

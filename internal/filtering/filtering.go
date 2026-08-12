@@ -953,8 +953,15 @@ func (d *DNSFilter) matchHost(
 	}
 
 	res = d.matchHostProcessDNSResult(rrtype, dnsres)
+	d.enrichResultRules(ctx, host, res.Rules)
+
+	return res, nil
+}
+
+func (d *DNSFilter) enrichResultRules(ctx context.Context, host string, rules []*ResultRule) {
 	d.confMu.RLock()
-	for _, r := range res.Rules {
+	defer d.confMu.RUnlock()
+	for _, r := range rules {
 		for _, f := range d.conf.Filters {
 			if rulelist.APIID(f.ID) == r.FilterListID {
 				r.Text = r.Text + " (" + f.Name + ")"
@@ -969,9 +976,6 @@ func (d *DNSFilter) matchHost(
 			"filter_list_id", r.FilterListID,
 		)
 	}
-	d.confMu.RUnlock()
-
-	return res, nil
 }
 
 // makeResult returns a properly constructed Result.

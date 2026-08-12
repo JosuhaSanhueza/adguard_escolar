@@ -40,18 +40,7 @@ func (s *Server) filterDNSRequest(
 		return nil, fmt.Errorf("checking host %q: %w", host, err)
 	}
 
-	// GameControl check: if request is filtered by a Game rule, but client IP is allowed in GameControl, unblock it!
-	if resVal.IsFiltered && s.dnsFilter.GameControlAllowedChecker != nil {
-		clientIPStr := dctx.proxyCtx.Addr.Addr().String()
-		if s.dnsFilter.GameControlAllowedChecker(clientIPStr) {
-			// Check if the rule that blocked it belongs to Games blocklist
-			if len(resVal.Rules) > 0 && strings.Contains(strings.ToLower(resVal.Rules[0].Text), "games") {
-				resVal.Reason = filtering.NotFilteredNotFound
-				resVal.IsFiltered = false
-				resVal.Rules = nil
-			}
-		}
-	}
+	s.checkGameControlAllowed(dctx, &resVal)
 
 	// TODO(a.garipov): Make CheckHost return a pointer.
 	res = &resVal
@@ -246,4 +235,19 @@ func (s *Server) filterSVCBHint(
 	}
 
 	return nil, nil
+}
+
+func (s *Server) checkGameControlAllowed(dctx *dnsContext, resVal *filtering.Result) {
+	if !resVal.IsFiltered || s.dnsFilter.GameControlAllowedChecker == nil {
+		return
+	}
+	clientIPStr := dctx.proxyCtx.Addr.Addr().String()
+	if !s.dnsFilter.GameControlAllowedChecker(clientIPStr) {
+		return
+	}
+	if len(resVal.Rules) > 0 && strings.Contains(strings.ToLower(resVal.Rules[0].Text), "games") {
+		resVal.Reason = filtering.NotFilteredNotFound
+		resVal.IsFiltered = false
+		resVal.Rules = nil
+	}
 }

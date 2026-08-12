@@ -177,21 +177,40 @@ func (s *Server) updateStats(dctx *dnsContext, clientIP string, processingTime t
 		filtering.FilteredBlockedService:
 		e.Result = stats.RFiltered
 		if len(dctx.result.Rules) > 0 {
-			fid := uint32(dctx.result.Rules[0].FilterListID)
-			ruleText := strings.ToLower(dctx.result.Rules[0].Text)
-			// Match HaGeZi Security/Malware lists (IDs 34, 52, 46, 54, 44, 55 or dynamic filter IDs)
-			if fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 ||
-				strings.Contains(ruleText, "hagezi") || strings.Contains(ruleText, "abuse") ||
-				strings.Contains(ruleText, "malware") || strings.Contains(ruleText, "threat") {
-				e.Result = stats.RSafeBrowsing
-			} else if strings.Contains(ruleText, "nsfw") || strings.Contains(ruleText, "porn") ||
-				strings.Contains(ruleText, "adult") || strings.Contains(ruleText, "xvideos") {
-				e.Result = stats.RParental
-			} else if strings.Contains(ruleText, "games") || strings.Contains(ruleText, "gamecontrol") || strings.Contains(ruleText, "poki") {
-				e.Result = stats.RGames
+			if r := matchRuleCategory(dctx.result.Rules[0]); r != stats.RNotFiltered {
+				e.Result = r
 			}
 		}
 	}
 
 	s.stats.Update(e)
+}
+
+func matchRuleCategory(rule *filtering.ResultRule) stats.Result {
+	rText := strings.ToLower(rule.Text)
+	if esMalwareRule(uint32(rule.FilterListID), rText) {
+		return stats.RSafeBrowsing
+	}
+	if esAdultRule(rText) {
+		return stats.RParental
+	}
+	if esGamesRule(rText) {
+		return stats.RGames
+	}
+	return stats.RNotFiltered
+}
+
+func esMalwareRule(fid uint32, rText string) bool {
+	return fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 ||
+		strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
+		strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+}
+
+func esAdultRule(rText string) bool {
+	return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
+		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos")
+}
+
+func esGamesRule(rText string) bool {
+	return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
 }
