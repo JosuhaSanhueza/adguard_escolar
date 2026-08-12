@@ -279,6 +279,9 @@ type DNSFilter struct {
 	// GameControlChecker checks if host/ip should be blocked by GameControl.
 	GameControlChecker func(ipStr, host string) bool
 
+	// GameControlAllowedChecker checks if host IP is explicitly allowed (unblocked) in GameControl.
+	GameControlAllowedChecker func(ipStr string) bool
+
 	// applyClientFiltering retrieves persistent client information using the
 	// ClientID or client IP address, and applies it to the filtering settings.
 	//
@@ -497,6 +500,11 @@ func (d *DNSFilter) ParentalBlockHost() (host string) {
 // SetGameControlChecker registers the callback function for GameControl IP/domain blocking.
 func (d *DNSFilter) SetGameControlChecker(fn func(ipStr, host string) bool) {
 	d.GameControlChecker = fn
+}
+
+// SetGameControlAllowedChecker registers the callback function to check if an IP is unblocked in GameControl.
+func (d *DNSFilter) SetGameControlAllowedChecker(fn func(ipStr string) bool) {
+	d.GameControlAllowedChecker = fn
 }
 
 // Matched returns true if any match at all was found regardless of

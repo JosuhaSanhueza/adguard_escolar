@@ -49,8 +49,9 @@ const (
 	RSafeBrowsing
 	RSafeSearch
 	RParental
+	RGames
 
-	resultLast = RParental + 1
+	resultLast = RGames + 1
 )
 
 // Entry is a statistics data entry.

@@ -76,7 +76,7 @@ const Statistics = ({
             />
         </div>
 
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-3 mb-3">
             <StatsCard
                 total={numReplacedParental}
                 lineData={replacedParental}
@@ -87,6 +87,20 @@ const Statistics = ({
                     </Link>
                 }
                 variant={STATS_CARD_VARIANTS.ADULT}
+            />
+        </div>
+
+        <div className="col-sm-6 col-lg-3 mb-3">
+            <StatsCard
+                total={numBlockedFiltering}
+                lineData={blockedFiltering}
+                percent={getPercent(numDnsQueries, numBlockedFiltering)}
+                title={
+                    <Link to={`logs?response_status=${RESPONSE_FILTER.BLOCKED_GAMES.QUERY}`}>
+                        Juegos Bloqueados
+                    </Link>
+                }
+                variant={STATS_CARD_VARIANTS.ADS}
             />
         </div>
     </div>

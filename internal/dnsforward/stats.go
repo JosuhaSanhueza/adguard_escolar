@@ -187,6 +187,8 @@ func (s *Server) updateStats(dctx *dnsContext, clientIP string, processingTime t
 			} else if strings.Contains(ruleText, "nsfw") || strings.Contains(ruleText, "porn") ||
 				strings.Contains(ruleText, "adult") || strings.Contains(ruleText, "xvideos") {
 				e.Result = stats.RParental
+			} else if strings.Contains(ruleText, "games") || strings.Contains(ruleText, "gamecontrol") || strings.Contains(ruleText, "poki") {
+				e.Result = stats.RGames
 			}
 		}
 	}

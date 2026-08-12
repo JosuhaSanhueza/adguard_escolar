@@ -104,42 +104,46 @@ const GameControl: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="mb-4 p-3 border rounded bg-light">
-                            <h6 className="font-weight-bold mb-2">Configuración Modular de Rango de IPs / Equipos</h6>
+                        <div className="mb-4 p-3 border rounded" style={{ backgroundColor: 'var(--card-bg, #2b303b)', color: 'var(--text-color, #fff)' }}>
+                            <h6 className="font-weight-bold mb-3" style={{ color: 'var(--text-color, #fff)' }}>Configuración Modular de Rango de IPs / Equipos</h6>
                             <div className="form-row align-items-center">
-                                <div className="col-auto">
-                                    <label className="sr-only" htmlFor="rangeStart">IP Inicio</label>
-                                    <div className="input-group mb-2">
+                                <div className="col-auto mb-2">
+                                    <div className="input-group">
                                         <div className="input-group-prepend">
-                                            <div className="input-group-text">Inicio:</div>
+                                            <span className="input-group-text font-weight-bold" style={{ backgroundColor: '#343a40', color: '#fff', borderColor: '#495057' }}>
+                                                IP Inicio:
+                                            </span>
                                         </div>
                                         <input
                                             type="text"
                                             className="form-control"
                                             id="rangeStart"
+                                            style={{ backgroundColor: '#1e222d', color: '#fff', borderColor: '#495057' }}
                                             value={status.range_start}
                                             onChange={(e) => setStatus({ ...status, range_start: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="col-auto">
-                                    <label className="sr-only" htmlFor="rangeEnd">IP Fin</label>
-                                    <div className="input-group mb-2">
+                                <div className="col-auto mb-2">
+                                    <div className="input-group">
                                         <div className="input-group-prepend">
-                                            <div className="input-group-text">Fin:</div>
+                                            <span className="input-group-text font-weight-bold" style={{ backgroundColor: '#343a40', color: '#fff', borderColor: '#495057' }}>
+                                                IP Fin:
+                                            </span>
                                         </div>
                                         <input
                                             type="text"
                                             className="form-control"
                                             id="rangeEnd"
+                                            style={{ backgroundColor: '#1e222d', color: '#fff', borderColor: '#495057' }}
                                             value={status.range_end}
                                             onChange={(e) => setStatus({ ...status, range_end: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="col-auto">
+                                <div className="col-auto mb-2">
                                     <button
-                                        className="btn btn-primary mb-2"
+                                        className="btn btn-primary"
                                         onClick={async () => {
                                             await fetch('/control/gamecontrol/config', {
                                                 method: 'POST',
@@ -162,6 +166,7 @@ const GameControl: React.FC = () => {
                                 type="text"
                                 className="form-control"
                                 placeholder="Buscar por Nombre de Equipo (PC1, PC2...) o IP..."
+                                style={{ backgroundColor: '#1e222d', color: '#fff', borderColor: '#495057' }}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -188,20 +193,11 @@ const GameControl: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className="text-right">
-                                                <div className="custom-control custom-switch d-inline-block">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="custom-control-input"
-                                                        id={`switch-${h.ip}`}
-                                                        checked={h.blocked}
-                                                        onChange={() => handleToggleHost(h.ip, h.blocked)}
-                                                    />
-                                                    <label
-                                                        className="custom-control-label"
-                                                        htmlFor={`switch-${h.ip}`}>
-                                                        {h.blocked ? 'Desbloquear' : 'Bloquear'}
-                                                    </label>
-                                                </div>
+                                                <button
+                                                    className={`btn btn-sm ${h.blocked ? 'btn-success' : 'btn-danger'}`}
+                                                    onClick={() => handleToggleHost(h.ip, h.blocked)}>
+                                                    {h.blocked ? 'Permitir Acceso' : 'Bloquear Acceso'}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

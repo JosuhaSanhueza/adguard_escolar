@@ -109,6 +109,12 @@ const Counters = ({ refreshButton, subtitle }: CountersProps) => {
             response_status: RESPONSE_FILTER.BLOCKED_ADULT_WEBSITES.QUERY,
         },
         {
+            label: 'Juegos Bloqueados',
+            count: formatNumber(numBlockedFiltering),
+            tooltipTitle: 'Consultas de juegos bloqueados por GameControl o Filtro de Juegos',
+            response_status: RESPONSE_FILTER.BLOCKED_GAMES.QUERY,
+        },
+        {
             label: 'enforced_save_search',
             count: formatNumber(numReplacedSafesearch),
             tooltipTitle: 'number_of_dns_query_to_safe_search',

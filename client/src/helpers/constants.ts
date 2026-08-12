@@ -264,6 +264,10 @@ export const RESPONSE_FILTER = {
         QUERY: 'blocked_parental',
         LABEL: 'blocked_adult_websites',
     },
+    BLOCKED_GAMES: {
+        QUERY: 'blocked_games',
+        LABEL: 'Juegos Bloqueados',
+    },
     ALLOWED: {
         QUERY: 'whitelisted',
         LABEL: 'allowed',

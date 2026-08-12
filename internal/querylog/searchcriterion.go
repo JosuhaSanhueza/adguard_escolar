@@ -40,6 +40,7 @@ const (
 	filteringStatusBlockedService      = "blocked_services"     // blocked
 	filteringStatusBlockedSafebrowsing = "blocked_safebrowsing" // blocked by safebrowsing
 	filteringStatusBlockedParental     = "blocked_parental"     // blocked by parental control
+	filteringStatusBlockedGames        = "blocked_games"        // blocked by game control
 	filteringStatusWhitelisted         = "whitelisted"          // whitelisted
 	filteringStatusRewritten           = "rewritten"            // all kinds of rewrites
 	filteringStatusSafeSearch          = "safe_search"          // enforced safe search
@@ -50,6 +51,7 @@ const (
 var filteringStatusValues = container.NewMapSet(
 	filteringStatusAll,
 	filteringStatusBlocked,
+	filteringStatusBlockedGames,
 	filteringStatusBlockedParental,
 	filteringStatusBlockedSafebrowsing,
 	filteringStatusBlockedService,
@@ -226,6 +228,7 @@ func (c *searchCriterion) ctFilteringStatusCase(
 		return isFiltered || reason == filtering.NotFilteredAllowList || reasonIsRewrite(reason)
 	case
 		filteringStatusBlocked,
+		filteringStatusBlockedGames,
 		filteringStatusBlockedParental,
 		filteringStatusBlockedSafebrowsing,
 		filteringStatusBlockedService,
@@ -291,6 +294,12 @@ func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason, rules []
 			rText := strings.ToLower(rules[0].Text)
 			return strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
 				strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+		}
+		return false
+	case filteringStatusBlockedGames:
+		if len(rules) > 0 {
+			rText := strings.ToLower(rules[0].Text)
+			return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
 		}
 		return false
 	case filteringStatusBlockedService:

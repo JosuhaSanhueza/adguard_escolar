@@ -104,7 +104,7 @@ func (m *gameControlManager) getHosts() []GameControlHost {
 
 		blocked, exists := m.conf.BlockedHosts[ip]
 		if !exists {
-			blocked = false
+			blocked = true
 		}
 
 		hosts = append(hosts, GameControlHost{
@@ -212,15 +212,20 @@ func handleGameControlUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
 }
 
-// IsIPGameBlocked checks if a given IP address has GameControl blocking active.
-func IsIPGameBlocked(ipStr string) bool {
+// IsIPGameAllowed checks if a given IP address is explicitly allowed (unblocked) in GameControl.
+func IsIPGameAllowed(ipStr string) bool {
 	gameControlgameControlMgr.mu.RLock()
 	defer gameControlgameControlMgr.mu.RUnlock()
 
 	if !gameControlgameControlMgr.conf.Enabled {
-		return false
+		return true
 	}
-	return gameControlgameControlMgr.conf.BlockedHosts[ipStr]
+	// Default is blocked = true unless BlockedHosts[ipStr] is set to false (unblocked)
+	isBlocked, exists := gameControlgameControlMgr.conf.BlockedHosts[ipStr]
+	if !exists {
+		return false // Blocked by default
+	}
+	return !isBlocked // Allowed if blocked == false
 }
 
 // IsGameDomain checks if a domain belongs to common game blocklists or Poki.
