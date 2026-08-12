@@ -461,11 +461,11 @@ func (s *StatsCtx) dataFromUnits(units []*unitDB, curID uint32) (resp *StatsResp
 		if u.TimeAvg != 0 {
 			timeN++
 		}
-		sum.NResult[RFiltered] += u.NResult[RFiltered]
-		sum.NResult[RSafeBrowsing] += u.NResult[RSafeBrowsing]
-		sum.NResult[RSafeSearch] += u.NResult[RSafeSearch]
-		sum.NResult[RParental] += u.NResult[RParental]
-		sum.NResult[RGames] += u.NResult[RGames]
+		sum.NResult[RFiltered] += getResCount(u, RFiltered)
+		sum.NResult[RSafeBrowsing] += getResCount(u, RSafeBrowsing)
+		sum.NResult[RSafeSearch] += getResCount(u, RSafeSearch)
+		sum.NResult[RParental] += getResCount(u, RParental)
+		sum.NResult[RGames] += getResCount(u, RGames)
 	}
 
 	resp.NumDNSQueries = sum.NTotal
@@ -507,10 +507,14 @@ func (s *StatsCtx) fillCollectedStats(data *StatsResp, units []*unitDB, curID ui
 
 	for i, u := range units {
 		data.DNSQueries[i] += u.NTotal
-		data.BlockedFiltering[i] += u.NResult[RFiltered] + u.NResult[RSafeBrowsing] + u.NResult[RParental] + u.NResult[RGames]
-		data.ReplacedSafebrowsing[i] += u.NResult[RSafeBrowsing]
-		data.ReplacedParental[i] += u.NResult[RParental]
-		data.ReplacedGames[i] += u.NResult[RGames]
+		rF := getResCount(u, RFiltered)
+		rSB := getResCount(u, RSafeBrowsing)
+		rP := getResCount(u, RParental)
+		rG := getResCount(u, RGames)
+		data.BlockedFiltering[i] += rF + rSB + rP + rG
+		data.ReplacedSafebrowsing[i] += rSB
+		data.ReplacedParental[i] += rP
+		data.ReplacedGames[i] += rG
 	}
 }
 
@@ -535,10 +539,14 @@ func (s *StatsCtx) fillCollectedStatsDaily(
 		day := i / 24
 
 		data.DNSQueries[day] += u.NTotal
-		data.BlockedFiltering[day] += u.NResult[RFiltered] + u.NResult[RSafeBrowsing] + u.NResult[RParental] + u.NResult[RGames]
-		data.ReplacedSafebrowsing[day] += u.NResult[RSafeBrowsing]
-		data.ReplacedParental[day] += u.NResult[RParental]
-		data.ReplacedGames[day] += u.NResult[RGames]
+		rF := getResCount(u, RFiltered)
+		rSB := getResCount(u, RSafeBrowsing)
+		rP := getResCount(u, RParental)
+		rG := getResCount(u, RGames)
+		data.BlockedFiltering[day] += rF + rSB + rP + rG
+		data.ReplacedSafebrowsing[day] += rSB
+		data.ReplacedParental[day] += rP
+		data.ReplacedGames[day] += rG
 	}
 }
 
@@ -634,4 +642,11 @@ func prepareTopUpstreamsAvgTime(
 	}
 
 	return topUpstreamsAvgTime
+}
+
+func getResCount(u *unitDB, r Result) uint64 {
+	if u == nil || int(r) >= len(u.NResult) {
+		return 0
+	}
+	return u.NResult[r]
 }
