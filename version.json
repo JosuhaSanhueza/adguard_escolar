@@ -1,0 +1,7 @@
+{
+  "version": "v1.0.1",
+  "announcement": "Actualización AdGuard Escolar con módulo GameControl",
+  "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
+  "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
+  "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"
+}
