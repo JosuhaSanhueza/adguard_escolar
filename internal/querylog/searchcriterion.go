@@ -186,7 +186,7 @@ func (c *searchCriterion) match(entry *logEntry) bool {
 	case ctTerm:
 		return c.ctDomainOrClientCase(entry)
 	case ctFilteringStatus:
-		return c.ctFilteringStatusCase(entry.Result.Reason, entry.Result.IsFiltered)
+		return c.ctFilteringStatusCase(entry.Result.Reason, entry.Result.IsFiltered, entry.Result.Rules)
 	case ctReason:
 		// TODO(f.setrakov): Consider comparing [filtering.Reason] instead of
 		// strings.
@@ -217,6 +217,7 @@ func (c *searchCriterion) ctDomainOrClientCase(e *logEntry) bool {
 func (c *searchCriterion) ctFilteringStatusCase(
 	reason filtering.Reason,
 	isFiltered bool,
+	rules []*filtering.ResultRule,
 ) (matched bool) {
 	switch c.value {
 	case filteringStatusAll:
@@ -229,7 +230,7 @@ func (c *searchCriterion) ctFilteringStatusCase(
 		filteringStatusBlockedSafebrowsing,
 		filteringStatusBlockedService,
 		filteringStatusSafeSearch:
-		return isFiltered && c.isFilteredWithReason(reason)
+		return isFiltered && c.isFilteredWithReason(reason, rules)
 	case filteringStatusWhitelisted:
 		return reason == filtering.NotFilteredAllowList
 	case filteringStatusRewritten:
@@ -260,7 +261,7 @@ func reasonIsRewrite(r filtering.Reason) (ok bool) {
 //   - [filteringStatusBlockedService]
 //   - [filteringStatusBlocked]
 //   - [filteringStatusSafeSearch]
-func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason) (matched bool) {
+func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason, rules []*filtering.ResultRule) (matched bool) {
 	switch c.value {
 	case filteringStatusBlocked:
 		switch reason {
@@ -272,9 +273,26 @@ func (c *searchCriterion) isFilteredWithReason(reason filtering.Reason) (matched
 			return false
 		}
 	case filteringStatusBlockedParental:
-		return reason == filtering.FilteredParental
+		if reason == filtering.FilteredParental {
+			return true
+		}
+		if len(rules) > 0 {
+			rText := strings.ToLower(rules[0].Text)
+			return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
+				strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") ||
+				strings.Contains(rText, "oisd")
+		}
+		return false
 	case filteringStatusBlockedSafebrowsing:
-		return reason == filtering.FilteredSafeBrowsing
+		if reason == filtering.FilteredSafeBrowsing {
+			return true
+		}
+		if len(rules) > 0 {
+			rText := strings.ToLower(rules[0].Text)
+			return strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
+				strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+		}
+		return false
 	case filteringStatusBlockedService:
 		return reason == filtering.FilteredBlockedService
 	case filteringStatusSafeSearch:
