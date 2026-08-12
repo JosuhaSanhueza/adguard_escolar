@@ -276,6 +276,9 @@ type DNSFilter struct {
 	// parentalControl is the parental control hash-prefix checker.
 	parentalControlChecker Checker
 
+	// GameControlChecker checks if host/ip should be blocked by GameControl.
+	GameControlChecker func(ipStr, host string) bool
+
 	// applyClientFiltering retrieves persistent client information using the
 	// ClientID or client IP address, and applies it to the filtering settings.
 	//
@@ -489,6 +492,11 @@ func (d *DNSFilter) SafeBrowsingBlockHost() (host string) {
 // ParentalBlockHost returns a host for parental protection blocked responses.
 func (d *DNSFilter) ParentalBlockHost() (host string) {
 	return d.conf.ParentalBlockHost
+}
+
+// SetGameControlChecker registers the callback function for GameControl IP/domain blocking.
+func (d *DNSFilter) SetGameControlChecker(fn func(ipStr, host string) bool) {
+	d.GameControlChecker = fn
 }
 
 // Matched returns true if any match at all was found regardless of
@@ -937,7 +945,14 @@ func (d *DNSFilter) matchHost(
 	}
 
 	res = d.matchHostProcessDNSResult(rrtype, dnsres)
+	d.confMu.RLock()
 	for _, r := range res.Rules {
+		for _, f := range d.conf.Filters {
+			if rulelist.APIID(f.ID) == r.FilterListID {
+				r.Text = r.Text + " (" + f.Name + ")"
+				break
+			}
+		}
 		d.logger.DebugContext(
 			ctx,
 			"found rule for host",
@@ -946,6 +961,7 @@ func (d *DNSFilter) matchHost(
 			"filter_list_id", r.FilterListID,
 		)
 	}
+	d.confMu.RUnlock()
 
 	return res, nil
 }

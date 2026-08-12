@@ -222,3 +222,14 @@ func IsIPGameBlocked(ipStr string) bool {
 	}
 	return gameControlgameControlMgr.conf.BlockedHosts[ipStr]
 }
+
+// IsGameDomain checks if a domain belongs to common game blocklists or Poki.
+func IsGameDomain(host string) bool {
+	h := strings.ToLower(host)
+	return strings.Contains(h, "poki.com") ||
+		strings.Contains(h, "roblox.com") ||
+		strings.Contains(h, "epicgames.com") ||
+		strings.Contains(h, "steamcommunity.com") ||
+		strings.Contains(h, "steampowered.com") ||
+		strings.Contains(h, "riotgames.com")
+}

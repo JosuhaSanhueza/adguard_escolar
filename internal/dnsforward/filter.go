@@ -40,6 +40,18 @@ func (s *Server) filterDNSRequest(
 		return nil, fmt.Errorf("checking host %q: %w", host, err)
 	}
 
+	// GameControl check: if client IP is game-blocked and request matches game list, force block
+	if s.dnsFilter.GameControlChecker != nil {
+		clientIPStr := dctx.proxyCtx.Addr.Addr().String()
+		if s.dnsFilter.GameControlChecker(clientIPStr, host) {
+			resVal.Reason = filtering.FilteredBlockList
+			resVal.IsFiltered = true
+			resVal.Rules = []*filtering.ResultRule{{
+				Text: "GameControl Blocked (" + host + ")",
+			}}
+		}
+	}
+
 	// TODO(a.garipov): Make CheckHost return a pointer.
 	res = &resVal
 

@@ -108,6 +108,10 @@ func initDNS(
 		return err
 	}
 
+	globalContext.filters.SetGameControlChecker(func(ipStr, host string) bool {
+		return IsIPGameBlocked(ipStr) && IsGameDomain(host)
+	})
+
 	err = initDNSServer(
 		ctx,
 		dnsforward.DNSCreateParams{

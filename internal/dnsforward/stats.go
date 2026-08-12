@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
@@ -177,12 +178,15 @@ func (s *Server) updateStats(dctx *dnsContext, clientIP string, processingTime t
 		e.Result = stats.RFiltered
 		if len(dctx.result.Rules) > 0 {
 			fid := uint32(dctx.result.Rules[0].FilterListID)
-			// HaGeZi Security / Malware filters: 34, 52, 46, 54, 44, 55 (or rules from these lists)
-			// When blocked by HaGeZi, map to RSafeBrowsing for Malware Card
-			// When blocked by OISD NSFW, map to RParental for Adult Card
-			// If rule text or filter ID matches adult/nsfw or hagezi security
-			if fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 {
+			ruleText := strings.ToLower(dctx.result.Rules[0].Text)
+			// Match HaGeZi Security/Malware lists (IDs 34, 52, 46, 54, 44, 55 or dynamic filter IDs)
+			if fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 ||
+				strings.Contains(ruleText, "hagezi") || strings.Contains(ruleText, "abuse") ||
+				strings.Contains(ruleText, "malware") || strings.Contains(ruleText, "threat") {
 				e.Result = stats.RSafeBrowsing
+			} else if strings.Contains(ruleText, "nsfw") || strings.Contains(ruleText, "porn") ||
+				strings.Contains(ruleText, "adult") || strings.Contains(ruleText, "xvideos") {
+				e.Result = stats.RParental
 			}
 		}
 	}
