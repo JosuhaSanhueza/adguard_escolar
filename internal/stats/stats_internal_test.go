@@ -141,7 +141,7 @@ func TestStatsCtx_FillCollectedStats_daily(t *testing.T) {
 		nResult[RParental] = n
 
 		day := i / 24
-		sum[RFiltered][day] += n
+		sum[RFiltered][day] += n * 3
 		sum[RSafeBrowsing][day] += n
 		sum[RParental][day] += n
 

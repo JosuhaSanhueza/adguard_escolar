@@ -121,11 +121,16 @@ func TestStats(t *testing.T) {
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			},
+			ReplacedGames: []uint64{
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			},
 			NumDNSQueries:           2,
 			NumBlockedFiltering:     1,
 			NumReplacedSafebrowsing: 0,
 			NumReplacedSafesearch:   0,
 			NumReplacedParental:     0,
+			NumReplacedGames:        0,
 			AvgProcessingTime:       0.123456,
 		}
 
@@ -163,6 +168,7 @@ func TestStats(t *testing.T) {
 			BlockedFiltering:      _24zeroes[:],
 			ReplacedSafebrowsing:  _24zeroes[:],
 			ReplacedParental:      _24zeroes[:],
+			ReplacedGames:         _24zeroes[:],
 		}
 
 		req = httptest.NewRequest(http.MethodGet, "/control/stats", nil)
