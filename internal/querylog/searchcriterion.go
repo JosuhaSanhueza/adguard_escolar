@@ -298,8 +298,10 @@ func matchSafebrowsingRule(rules []*filtering.ResultRule) bool {
 		return false
 	}
 	rText := strings.ToLower(rules[0].Text)
-	return strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
-		strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+	if strings.Contains(rText, "hagezi") && !strings.Contains(rText, "threat") && !strings.Contains(rText, "abuse") && !strings.Contains(rText, "tif") {
+		return false
+	}
+	return strings.Contains(rText, "abuse") || strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
 }
 
 func matchGamesRule(rules []*filtering.ResultRule) bool {

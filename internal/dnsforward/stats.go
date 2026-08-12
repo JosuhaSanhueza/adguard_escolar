@@ -201,9 +201,11 @@ func matchRuleCategory(rule *filtering.ResultRule) stats.Result {
 }
 
 func esMalwareRule(fid uint32, rText string) bool {
+	if strings.Contains(rText, "hagezi") && !strings.Contains(rText, "threat") && !strings.Contains(rText, "abuse") && !strings.Contains(rText, "tif") {
+		return false
+	}
 	return fid == 34 || fid == 52 || fid == 46 || fid == 54 || fid == 44 || fid == 55 ||
-		strings.Contains(rText, "hagezi") || strings.Contains(rText, "abuse") ||
-		strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+		strings.Contains(rText, "abuse") || strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
 }
 
 func esAdultRule(rText string) bool {
