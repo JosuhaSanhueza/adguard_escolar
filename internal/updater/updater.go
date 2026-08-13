@@ -356,7 +356,7 @@ func (u *Updater) replace(ctx context.Context) (err error) {
 		"from", u.currentExeName,
 		"to", u.backupExeName,
 	)
-	err = os.Rename(u.currentExeName, u.backupExeName)
+	err = copyFile(u.currentExeName, u.backupExeName, aghos.DefaultPermExe)
 	if err != nil {
 		return err
 	}

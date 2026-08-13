@@ -357,30 +357,42 @@ func ensureOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
 		_ = os.WriteFile("/etc/rc.conf.d/adguardhome", []byte("adguardhome_enable=\"YES\"\n"), 0o644)
 	}
 
+	// 1. OPNsense official boot hook (rc.syshook system)
+	syshookDir := "/usr/local/etc/rc.syshook.d/start"
+	_ = os.MkdirAll(syshookDir, 0o755)
+	syshookScript := `#!/bin/sh
+/usr/local/bin/AdGuardHome -s status >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    /usr/local/bin/AdGuardHome -s start >/dev/null 2>&1 &
+fi
+`
+	_ = os.WriteFile(syshookDir+"/99-adguardhome", []byte(syshookScript), 0o755)
+
+	// 2. OPNsense configctl actions
 	actionsDir := "/usr/local/opnsense/service/conf/actions.d"
 	if _, err := os.Stat("/usr/local/opnsense"); err == nil {
 		_ = os.MkdirAll(actionsDir, 0o755)
 		actionsContent := `[start]
-command:/usr/local/etc/rc.d/AdGuardHome start
+command:/usr/local/bin/AdGuardHome -s start
 type:script
-message:Starting AdGuardHome
+message:Starting AdGuard Home
 
 [stop]
-command:/usr/local/etc/rc.d/AdGuardHome stop
+command:/usr/local/bin/AdGuardHome -s stop
 type:script
-message:Stopping AdGuardHome
+message:Stopping AdGuard Home
 
 [restart]
-command:/usr/local/etc/rc.d/AdGuardHome restart
+command:/usr/local/bin/AdGuardHome -s restart
 type:script
-message:Restarting AdGuardHome
+message:Restarting AdGuard Home
 
 [status]
-command:/usr/local/etc/rc.d/AdGuardHome status
+command:/usr/local/bin/AdGuardHome -s status
 type:script_output
-message:Checking AdGuardHome status
+message:Checking AdGuard Home status
 `
 		_ = os.WriteFile(actionsDir+"/actions_adguardhome.conf", []byte(actionsContent), 0o644)
-		l.InfoContext(ctx, "configured OPNsense persistent service integration")
+		l.InfoContext(ctx, "configured OPNsense persistent service & syshook integration")
 	}
 }
