@@ -329,6 +329,8 @@ func handleServiceInstallCmd(
 		return fmt.Errorf("installing service: %w", err)
 	}
 
+	ensureOPNsenseServiceFiles(ctx, l)
+
 	err = mgr.Perform(ctx, &ossvc.ActionStart{
 		ServiceName: serviceName,
 	})
@@ -346,4 +348,39 @@ func handleServiceInstallCmd(
 	}
 
 	return nil
+}
+
+// ensureOPNsenseServiceFiles creates persistent OPNsense startup configuration files if running on FreeBSD/OPNsense.
+func ensureOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
+	if _, err := os.Stat("/etc/rc.conf.d"); err == nil || os.IsNotExist(err) {
+		_ = os.MkdirAll("/etc/rc.conf.d", 0o755)
+		_ = os.WriteFile("/etc/rc.conf.d/adguardhome", []byte("adguardhome_enable=\"YES\"\n"), 0o644)
+	}
+
+	actionsDir := "/usr/local/opnsense/service/conf/actions.d"
+	if _, err := os.Stat("/usr/local/opnsense"); err == nil {
+		_ = os.MkdirAll(actionsDir, 0o755)
+		actionsContent := `[start]
+command:/usr/local/etc/rc.d/AdGuardHome start
+type:script
+message:Starting AdGuardHome
+
+[stop]
+command:/usr/local/etc/rc.d/AdGuardHome stop
+type:script
+message:Stopping AdGuardHome
+
+[restart]
+command:/usr/local/etc/rc.d/AdGuardHome restart
+type:script
+message:Restarting AdGuardHome
+
+[status]
+command:/usr/local/etc/rc.d/AdGuardHome status
+type:script_output
+message:Checking AdGuardHome status
+`
+		_ = os.WriteFile(actionsDir+"/actions_adguardhome.conf", []byte(actionsContent), 0o644)
+		l.InfoContext(ctx, "configured OPNsense persistent service integration")
+	}
 }

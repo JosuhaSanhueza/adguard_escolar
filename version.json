@@ -1,6 +1,6 @@
 {
-  "version": "v1.0.2",
-  "announcement": "Actualización AdGuard Escolar: Soporte de auto-arranque nativo permanente en OPNsense",
+  "version": "v1.0.3",
+  "announcement": "Actualización AdGuard Escolar: Auto-arranque persistente nativo OPNsense",
   "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
   "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
   "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"
