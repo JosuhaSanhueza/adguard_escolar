@@ -1,0 +1,65 @@
+name: Auto Build Packages on Push
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'AdGuardHome_linux_amd64.tar.gz'
+      - 'AdGuardHome_freebsd_amd64.tar.gz'
+      - 'README.md'
+      - '.github/**'
+
+permissions:
+  contents: write
+
+jobs:
+  auto-build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+
+      - name: Build Static Frontend & Re-generate Archives
+        run: |
+          cd client
+          npm ci
+          npm run build-prod
+          cd ..
+          
+          go build -o AdGuardHome main.go
+          GOOS=freebsd GOARCH=amd64 go build -o AdGuardHome_freebsd_amd64 main.go
+          
+          rm -rf tmp_pkg
+          mkdir -p tmp_pkg/AdGuardHome
+          cp AdGuardHome tmp_pkg/AdGuardHome/AdGuardHome
+          cd tmp_pkg && tar -czvf ../AdGuardHome_linux_amd64.tar.gz AdGuardHome && cd ..
+          
+          rm -rf tmp_pkg
+          mkdir -p tmp_pkg/AdGuardHome
+          cp AdGuardHome_freebsd_amd64 tmp_pkg/AdGuardHome/AdGuardHome
+          cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
+          rm -rf tmp_pkg
+
+      - name: Commit & Push Updated Release Tarballs
+        run: |
+          git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
+          git commit -m "build(release): Automatically update compiled release packages [skip ci]" || true
+          git push origin master
