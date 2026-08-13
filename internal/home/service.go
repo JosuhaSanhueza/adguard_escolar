@@ -361,12 +361,9 @@ func ensureOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
 	syshookDir := "/usr/local/etc/rc.syshook.d/start"
 	_ = os.MkdirAll(syshookDir, 0o755)
 	syshookScript := `#!/bin/sh
-/usr/local/bin/AdGuardHome -s status >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-    /usr/local/bin/AdGuardHome -s start >/dev/null 2>&1 &
-fi
+/usr/local/bin/AdGuardHome -s run --work-dir /usr/local/AdGuardHome >/dev/null 2>&1 &
 `
-	_ = os.WriteFile(syshookDir+"/99-adguardhome", []byte(syshookScript), 0o755)
+	_ = os.WriteFile(syshookDir+"/99-adguardhome.sh", []byte(syshookScript), 0o755)
 
 	// 2. OPNsense configctl actions
 	actionsDir := "/usr/local/opnsense/service/conf/actions.d"
