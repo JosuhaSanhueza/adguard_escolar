@@ -123,7 +123,7 @@ const Counters = ({ refreshButton, subtitle }: CountersProps) => {
         },
         {
             label: 'average_processing_time',
-            count: `${round(avgProcessingTime * 1000)} ms`,
+            count: `${round(avgProcessingTime, 2)} ms`,
             tooltipTitle: 'average_processing_time_hint',
         },
     ];
