@@ -1,0 +1,87 @@
+name: Sync Upstream & Build Release
+
+on:
+  schedule:
+    # Runs every day at 03:00 UTC to check for upstream updates
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Upstream Remote & Sync
+        run: |
+          git remote add upstream https://github.com/AdguardTeam/AdGuardHome.git || true
+          git fetch upstream master
+          
+          # Check if there are new commits from upstream master
+          BEHIND_COUNT=$(git rev-list --count master..upstream/master)
+          echo "Commits behind upstream: $BEHIND_COUNT"
+          
+          if [ "$BEHIND_COUNT" -eq 0 ]; then
+            echo "Fork is up to date with upstream."
+            exit 0
+          fi
+          
+          # Try merging upstream master into current master
+          git merge upstream/master -m "merge: Sync upstream changes from AdGuardTeam/AdGuardHome" || {
+            echo "Merge conflict detected! Creating a PR for manual review..."
+            git merge --abort
+            git checkout -b sync-upstream-update
+            git merge upstream/master -m "merge: Sync upstream changes from AdGuardTeam/AdGuardHome" -X ours || true
+            git push origin sync-upstream-update --force
+            exit 0
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+
+      - name: Build Static Frontend & Re-generate Archives
+        run: |
+          cd client
+          npm ci
+          npm run build-prod
+          cd ..
+          
+          go build -o AdGuardHome main.go
+          GOOS=freebsd GOARCH=amd64 go build -o AdGuardHome_freebsd_amd64 main.go
+          
+          rm -rf tmp_pkg
+          mkdir -p tmp_pkg/AdGuardHome
+          cp AdGuardHome tmp_pkg/AdGuardHome/AdGuardHome
+          cd tmp_pkg && tar -czvf ../AdGuardHome_linux_amd64.tar.gz AdGuardHome && cd ..
+          
+          rm -rf tmp_pkg
+          mkdir -p tmp_pkg/AdGuardHome
+          cp AdGuardHome_freebsd_amd64 tmp_pkg/AdGuardHome/AdGuardHome
+          cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
+          rm -rf tmp_pkg
+
+      - name: Commit & Push Updated Tarballs
+        run: |
+          git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
+          git commit -m "chore(release): Auto-rebuild tarball packages after upstream sync" || true
+          git push origin master
