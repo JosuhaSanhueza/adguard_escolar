@@ -361,22 +361,17 @@ func (u *Updater) replace(ctx context.Context) (err error) {
 		return err
 	}
 
-	if u.goos == "windows" {
-		// Use copy, since renaming fails with "File in use" error.
-		err = copyFile(u.updateExeName, u.currentExeName, aghos.DefaultPermExe)
-	} else {
-		err = os.Rename(u.updateExeName, u.currentExeName)
-	}
-	if err != nil {
-		return err
-	}
-
 	u.logger.InfoContext(
 		ctx,
 		"replacing current executable",
 		"from", u.updateExeName,
 		"to", u.currentExeName,
 	)
+
+	err = copyFile(u.updateExeName, u.currentExeName, aghos.DefaultPermExe)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
