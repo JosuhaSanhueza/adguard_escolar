@@ -37,6 +37,10 @@ const maxVersionRespSize datasize.ByteSize = 64 * datasize.KB
 // VersionInfo downloads the latest version information.  If forceRecheck is
 // false and there are cached results, those results are returned.
 func (u *Updater) VersionInfo(ctx context.Context, forceRecheck bool) (vi VersionInfo, err error) {
+	if u == nil {
+		return VersionInfo{}, nil
+	}
+
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
