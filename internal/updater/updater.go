@@ -276,6 +276,8 @@ func (u *Updater) unpack(ctx context.Context) (err error) {
 		return fmt.Errorf("unknown package extension")
 	}
 
+	_ = os.Chmod(u.updateExeName, aghos.DefaultPermExe)
+
 	return nil
 }
 
