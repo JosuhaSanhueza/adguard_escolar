@@ -397,6 +397,7 @@ message:Checking AdGuard Home status
 // removeOPNsenseServiceFiles removes all persistent OPNsense configuration files during service uninstall.
 func removeOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
 	_ = os.Remove("/etc/rc.conf.d/adguardhome")
+	_ = os.Remove("/usr/local/etc/rc.d/AdGuardHome")
 	_ = os.Remove("/usr/local/etc/rc.syshook.d/start/99-adguardhome.sh")
 	_ = os.Remove("/usr/local/etc/rc.syshook.d/start/99-adguardhome")
 	_ = os.Remove("/usr/local/opnsense/service/conf/actions.d/actions_adguardhome.conf")
