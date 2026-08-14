@@ -361,7 +361,7 @@ func ensureOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
 	syshookDir := "/usr/local/etc/rc.syshook.d/start"
 	_ = os.MkdirAll(syshookDir, 0o755)
 	syshookScript := `#!/bin/sh
-/usr/local/bin/AdGuardHome -s run --work-dir /usr/local/AdGuardHome >/dev/null 2>&1 &
+/usr/local/bin/AdGuardHome -s run --work-dir /usr/local/bin >/dev/null 2>&1 &
 `
 	_ = os.WriteFile(syshookDir+"/99-adguardhome.sh", []byte(syshookScript), 0o755)
 

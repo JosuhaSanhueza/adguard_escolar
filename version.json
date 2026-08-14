@@ -1,6 +1,6 @@
 {
-  "version": "v1.1.0",
-  "announcement": "Actualización AdGuard Escolar: Corrección de desinstalación limpia y servicio FreeBSD",
+  "version": "v1.1.1",
+  "announcement": "Actualización AdGuard Escolar: Corrección de ruta de trabajo para primer arranque del Wizard",
   "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
   "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
   "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"
