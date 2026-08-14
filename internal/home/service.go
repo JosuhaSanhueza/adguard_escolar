@@ -232,6 +232,7 @@ func handleServiceCommand(
 	case "install":
 		return handleServiceInstallCmd(ctx, l, mgr, opts, workDir, confPath)
 	case "uninstall":
+		removeOPNsenseServiceFiles(ctx, l)
 		action = &ossvc.ActionUninstall{
 			ServiceName: serviceName,
 		}
@@ -391,4 +392,14 @@ message:Checking AdGuard Home status
 		_ = os.WriteFile(actionsDir+"/actions_adguardhome.conf", []byte(actionsContent), 0o644)
 		l.InfoContext(ctx, "configured OPNsense persistent service & syshook integration")
 	}
+}
+
+// removeOPNsenseServiceFiles removes all persistent OPNsense configuration files during service uninstall.
+func removeOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
+	_ = os.Remove("/etc/rc.conf.d/adguardhome")
+	_ = os.Remove("/usr/local/etc/rc.syshook.d/start/99-adguardhome.sh")
+	_ = os.Remove("/usr/local/etc/rc.syshook.d/start/99-adguardhome")
+	_ = os.Remove("/usr/local/opnsense/service/conf/actions.d/actions_adguardhome.conf")
+	_ = os.Remove("/usr/local/etc/inc/plugins.inc.d/adguardhome.inc")
+	l.InfoContext(ctx, "removed OPNsense persistent service & syshook files")
 }
