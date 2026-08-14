@@ -22,7 +22,7 @@ const freeBSDScript = `#!/bin/sh
 . /etc/rc.subr
 
 name="{{.Name}}"
-{{.Name}}_enable=${{{.Name}}_enable:-"YES"}
+${name}_enable=${${name}_enable:-"YES"}
 {{.Name}}_env="IS_DAEMON=1"
 {{.Name}}_user="root"
 pidfile_child="/var/run/${name}.pid"
