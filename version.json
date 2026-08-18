@@ -1,6 +1,6 @@
 {
-  "version": "v1.1.6",
-  "announcement": "Actualización AdGuard Escolar: Optimización de velocidad en logs de Juegos Bloqueados",
+  "version": "v1.1.7",
+  "announcement": "Actualización AdGuard Escolar: Reemplazo atómico de binarios y optimización de logs",
   "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
   "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
   "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"

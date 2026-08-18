@@ -297,8 +297,9 @@ func (u *Updater) check(ctx context.Context) (err error) {
 		"end of the output"
 
 	var (
-		args = []string{"--check-config"}
-		buf  bytes.Buffer
+		checkConfPath = filepath.Join(u.updateDir, "AdGuardHome.yaml")
+		args          = []string{"-c", checkConfPath, "-w", u.workDir, "--check-config"}
+		buf           bytes.Buffer
 	)
 
 	u.logger.DebugContext(ctx, "executing", "cmd", u.updateExeName, "args", args)
@@ -628,25 +629,41 @@ func (u *Updater) unpackZip(
 func copyFile(src, dst string, perm fs.FileMode) (err error) {
 	d, err := os.ReadFile(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading %s: %w", src, err)
 	}
 
-	tmpDst := dst + ".tmp"
-	err = os.WriteFile(tmpDst, d, perm)
+	dir := filepath.Dir(dst)
+	tmpDst, err := os.CreateTemp(dir, filepath.Base(dst)+".*.tmp")
 	if err != nil {
-		return err
-	}
-
-	_ = os.Chmod(tmpDst, perm)
-
-	err = os.Rename(tmpDst, dst)
-	if err != nil {
-		// Fallback: If rename fails due to cross-device or permission, remove dst first then write
-		_ = os.Remove(dst)
-		err = os.WriteFile(dst, d, perm)
-		_ = os.Remove(tmpDst)
+		tmpDst, err = os.CreateTemp("", filepath.Base(dst)+".*.tmp")
 		if err != nil {
-			return err
+			return fmt.Errorf("creating temp file for %s: %w", dst, err)
+		}
+	}
+	tmpName := tmpDst.Name()
+
+	_, err = tmpDst.Write(d)
+	_ = tmpDst.Close()
+	if err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("writing temp file %s: %w", tmpName, err)
+	}
+
+	_ = os.Chmod(tmpName, perm)
+
+	// Try atomic rename first
+	err = os.Rename(tmpName, dst)
+	if err != nil {
+		// If rename fails (e.g. target exists/running or cross-device), remove target first then rename
+		_ = os.Remove(dst)
+		err = os.Rename(tmpName, dst)
+		if err != nil {
+			// Fallback: write directly to dst after remove
+			err = os.WriteFile(dst, d, perm)
+			_ = os.Remove(tmpName)
+			if err != nil {
+				return fmt.Errorf("replacing file %s: %w", dst, err)
+			}
 		}
 	}
 
