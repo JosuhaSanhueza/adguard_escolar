@@ -204,12 +204,16 @@ func esMalwareRule(fid uint32, rText string) bool {
 	return isMalwareFilterID(fid) ||
 		strings.Contains(rText, "abuse") ||
 		strings.Contains(rText, "malware") ||
+		strings.Contains(rText, "malicious") ||
 		strings.Contains(rText, "threat") ||
 		strings.Contains(rText, "badware") ||
 		strings.Contains(rText, "phishing") ||
+		strings.Contains(rText, "openphish") ||
+		strings.Contains(rText, "urlhaus") ||
 		strings.Contains(rText, "scam") ||
 		strings.Contains(rText, "tif") ||
-		strings.Contains(rText, "security")
+		strings.Contains(rText, "security") ||
+		strings.Contains(rText, "rebind")
 }
 
 func isMalwareFilterID(fid uint32) bool {

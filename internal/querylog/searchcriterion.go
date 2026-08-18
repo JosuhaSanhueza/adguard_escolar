@@ -186,12 +186,16 @@ func (c *searchCriterion) quickMatch(
 			lowerLine := strings.ToLower(line)
 			return strings.Contains(lowerLine, "abuse") ||
 				strings.Contains(lowerLine, "malware") ||
+				strings.Contains(lowerLine, "malicious") ||
 				strings.Contains(lowerLine, "threat") ||
 				strings.Contains(lowerLine, "badware") ||
 				strings.Contains(lowerLine, "phishing") ||
+				strings.Contains(lowerLine, "openphish") ||
+				strings.Contains(lowerLine, "urlhaus") ||
 				strings.Contains(lowerLine, "scam") ||
 				strings.Contains(lowerLine, "tif") ||
-				strings.Contains(lowerLine, "security")
+				strings.Contains(lowerLine, "security") ||
+				strings.Contains(lowerLine, "rebind")
 		case filteringStatusBlocked:
 			return strings.Contains(line, `"IsFiltered":true`)
 		default:
@@ -334,12 +338,16 @@ func matchSafebrowsingRule(rules []*filtering.ResultRule) bool {
 	rText := strings.ToLower(rules[0].Text)
 	return strings.Contains(rText, "abuse") ||
 		strings.Contains(rText, "malware") ||
+		strings.Contains(rText, "malicious") ||
 		strings.Contains(rText, "threat") ||
 		strings.Contains(rText, "badware") ||
 		strings.Contains(rText, "phishing") ||
+		strings.Contains(rText, "openphish") ||
+		strings.Contains(rText, "urlhaus") ||
 		strings.Contains(rText, "scam") ||
 		strings.Contains(rText, "tif") ||
-		strings.Contains(rText, "security")
+		strings.Contains(rText, "security") ||
+		strings.Contains(rText, "rebind")
 }
 
 func matchGamesRule(rules []*filtering.ResultRule) bool {
