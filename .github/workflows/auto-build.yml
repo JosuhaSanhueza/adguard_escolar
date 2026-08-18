@@ -60,6 +60,6 @@ jobs:
 
       - name: Commit & Push Updated Release Tarballs
         run: |
-          git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
+          git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz version.json internal/version/version.go
           git commit -m "build(release): Automatically update compiled release packages [skip ci]" || true
           git push origin master
