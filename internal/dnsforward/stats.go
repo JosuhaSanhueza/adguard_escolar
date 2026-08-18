@@ -201,10 +201,15 @@ func matchRuleCategory(rule *filtering.ResultRule) stats.Result {
 }
 
 func esMalwareRule(fid uint32, rText string) bool {
-	if strings.Contains(rText, "hagezi") && !strings.Contains(rText, "threat") && !strings.Contains(rText, "abuse") {
-		return false
-	}
-	return isMalwareFilterID(fid) || strings.Contains(rText, "abuse") || strings.Contains(rText, "malware") || strings.Contains(rText, "threat")
+	return isMalwareFilterID(fid) ||
+		strings.Contains(rText, "abuse") ||
+		strings.Contains(rText, "malware") ||
+		strings.Contains(rText, "threat") ||
+		strings.Contains(rText, "badware") ||
+		strings.Contains(rText, "phishing") ||
+		strings.Contains(rText, "scam") ||
+		strings.Contains(rText, "tif") ||
+		strings.Contains(rText, "security")
 }
 
 func isMalwareFilterID(fid uint32) bool {
@@ -213,7 +218,7 @@ func isMalwareFilterID(fid uint32) bool {
 
 func esAdultRule(rText string) bool {
 	return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
-		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos")
+		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") || strings.Contains(rText, "oisd")
 }
 
 func esGamesRule(rText string) bool {
