@@ -160,9 +160,39 @@ func (c *searchCriterion) quickMatch(
 
 		return ctDomainOrClientCaseNonStrict(c.value, c.asciiVal, clientID, name, host, ip)
 	case ctFilteringStatus:
-		// Go on, as we currently don't do quick matches against
-		// filtering statuses.
-		return true
+		switch c.value {
+		case filteringStatusBlockedGames:
+			if !strings.Contains(line, `"IsFiltered":true`) {
+				return false
+			}
+			lowerLine := strings.ToLower(line)
+			return strings.Contains(lowerLine, "games") ||
+				strings.Contains(lowerLine, "gamecontrol") ||
+				strings.Contains(lowerLine, "poki")
+		case filteringStatusBlockedParental:
+			if !strings.Contains(line, `"IsFiltered":true`) {
+				return false
+			}
+			lowerLine := strings.ToLower(line)
+			return strings.Contains(lowerLine, "nsfw") ||
+				strings.Contains(lowerLine, "porn") ||
+				strings.Contains(lowerLine, "adult") ||
+				strings.Contains(lowerLine, "xvideos") ||
+				strings.Contains(lowerLine, "oisd")
+		case filteringStatusBlockedSafebrowsing:
+			if !strings.Contains(line, `"IsFiltered":true`) {
+				return false
+			}
+			lowerLine := strings.ToLower(line)
+			return strings.Contains(lowerLine, "abuse") ||
+				strings.Contains(lowerLine, "malware") ||
+				strings.Contains(lowerLine, "threat") ||
+				strings.Contains(lowerLine, "hagezi")
+		case filteringStatusBlocked:
+			return strings.Contains(line, `"IsFiltered":true`)
+		default:
+			return true
+		}
 	case ctReason:
 		reasonCode := readJSONNumericValue(line, `"Reason":`)
 		if reasonCode == "" {
@@ -309,8 +339,8 @@ func matchGamesRule(rules []*filtering.ResultRule) bool {
 		return false
 	}
 	rText := strings.ToLower(rules[0].Text)
-	// Solamente considerar como "Juegos Bloqueados" si la regla contiene marcas específicas de la lista GamesBlockList o GameControl
-	return strings.Contains(rText, "gamesblocklist") ||
+	// Solamente considerar como "Juegos Bloqueados" si la regla contiene marcas específicas de la lista GamesBlockList o GameControl o "games"
+	return strings.Contains(rText, "games") ||
 		strings.Contains(rText, "gamecontrol") ||
 		strings.Contains(rText, "poki")
 }
