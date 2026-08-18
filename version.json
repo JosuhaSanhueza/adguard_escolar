@@ -1,6 +1,6 @@
 {
-  "version": "v1.1.3",
-  "announcement": "Actualización AdGuard Escolar: Permisos de ejecución automáticos para actualización por botón web",
+  "version": "v1.1.4",
+  "announcement": "Actualización AdGuard Escolar: Filtro estricto para la vista Juegos Bloqueados en Registro de Consultas",
   "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
   "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
   "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"

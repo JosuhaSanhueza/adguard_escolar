@@ -309,7 +309,10 @@ func matchGamesRule(rules []*filtering.ResultRule) bool {
 		return false
 	}
 	rText := strings.ToLower(rules[0].Text)
-	return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
+	// Solamente considerar como "Juegos Bloqueados" si la regla contiene marcas específicas de la lista GamesBlockList o GameControl
+	return strings.Contains(rText, "gamesblocklist") ||
+		strings.Contains(rText, "gamecontrol") ||
+		strings.Contains(rText, "poki")
 }
 
 // reasonIsRuleList returns true if r is one of:
