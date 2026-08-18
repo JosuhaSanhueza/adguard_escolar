@@ -1,6 +1,6 @@
 {
-  "version": "v1.1.4",
-  "announcement": "Actualización AdGuard Escolar: Filtro estricto para la vista Juegos Bloqueados en Registro de Consultas",
+  "version": "v1.1.5",
+  "announcement": "Actualización AdGuard Escolar: Reemplazo atómico de binarios en caliente para actualización web infalible",
   "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
   "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
   "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"

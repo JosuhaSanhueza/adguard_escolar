@@ -628,15 +628,29 @@ func (u *Updater) unpackZip(
 func copyFile(src, dst string, perm fs.FileMode) (err error) {
 	d, err := os.ReadFile(src)
 	if err != nil {
-		// Don't wrap the error, since it's informative enough as is.
 		return err
 	}
 
-	err = os.WriteFile(dst, d, perm)
+	tmpDst := dst + ".tmp"
+	err = os.WriteFile(tmpDst, d, perm)
 	if err != nil {
-		// Don't wrap the error, since it's informative enough as is.
 		return err
 	}
+
+	_ = os.Chmod(tmpDst, perm)
+
+	err = os.Rename(tmpDst, dst)
+	if err != nil {
+		// Fallback: If rename fails due to cross-device or permission, remove dst first then write
+		_ = os.Remove(dst)
+		err = os.WriteFile(dst, d, perm)
+		_ = os.Remove(tmpDst)
+		if err != nil {
+			return err
+		}
+	}
+
+	_ = os.Chmod(dst, perm)
 
 	return nil
 }
