@@ -447,7 +447,7 @@ func getDNSEncryption(extTLSConf *aghtls.ExtendedTLSConfig) (de dnsEncryption) {
 
 // startDNSServer starts the DNS server, clients container, filters, stats and
 // the query log.
-func startDNSServer() (err error) {
+func startDNSServer(ctx context.Context) (err error) {
 	config.RLock()
 	defer config.RUnlock()
 
@@ -457,8 +457,6 @@ func startDNSServer() (err error) {
 
 	globalContext.filters.EnableFilters(false)
 
-	// TODO(s.chzhen):  Pass context.
-	ctx := context.TODO()
 	err = globalContext.clients.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("starting clients container: %w", err)
