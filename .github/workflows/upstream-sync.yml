@@ -1,9 +1,6 @@
 name: Sync Upstream & Build Release
 
 on:
-  schedule:
-    # Runs every day at 03:00 UTC to check for upstream updates
-    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -26,62 +23,128 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Add Upstream Remote & Sync
+        id: sync
         run: |
           git remote add upstream https://github.com/AdguardTeam/AdGuardHome.git || true
           git fetch upstream master
-          
+
           # Check if there are new commits from upstream master
           BEHIND_COUNT=$(git rev-list --count master..upstream/master)
           echo "Commits behind upstream: $BEHIND_COUNT"
-          
+
           if [ "$BEHIND_COUNT" -eq 0 ]; then
             echo "Fork is up to date with upstream."
+            echo "has_update=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          
-          # Try merging upstream master into current master
-          git merge upstream/master -m "merge: Sync upstream changes from AdGuardTeam/AdGuardHome" || {
-            echo "Merge conflict detected! Creating a PR for manual review..."
+
+          BRANCH="sync-upstream-update"
+          BASE_SHA=$(git rev-parse HEAD)
+          git checkout -b "$BRANCH"
+
+          # Never touch master directly: always land the merge (clean or
+          # conflicted) on a branch and open a PR so a human reviews it.
+          if git merge upstream/master -m "merge: Sync upstream changes from AdGuardTeam/AdGuardHome"; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Merge conflict detected, keeping ours and flagging for manual resolution."
             git merge --abort
-            git checkout -b sync-upstream-update
             git merge upstream/master -m "merge: Sync upstream changes from AdGuardTeam/AdGuardHome" -X ours || true
-            git push origin sync-upstream-update --force
-            exit 0
-          }
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          # The default GITHUB_TOKEN can't push changes to .github/workflows/
+          # (GitHub requires an explicit `workflows` scope for that), and we
+          # don't want a bot silently rewriting our CI anyway. Revert any
+          # workflow files the merge touched/added back to our own version,
+          # and flag it in the PR for manual handling.
+          WF_CHANGED=$(git diff --name-only "$BASE_SHA" HEAD -- .github/workflows/)
+          if [ -n "$WF_CHANGED" ]; then
+            echo "Skipping workflow file changes (require manual review):"
+            echo "$WF_CHANGED"
+            for f in $WF_CHANGED; do
+              if git cat-file -e "$BASE_SHA:$f" 2>/dev/null; then
+                git checkout "$BASE_SHA" -- "$f"
+              else
+                git rm -f "$f"
+              fi
+            done
+            git commit -m "chore: keep existing .github/workflows/ (upstream changes need manual review)" || true
+            echo "workflows_skipped=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "wf_list<<EOF"
+              echo "$WF_CHANGED"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "workflows_skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          git push origin "$BRANCH" --force
+          echo "has_update=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
+        if: steps.sync.outputs.has_update == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Set up Go
+        if: steps.sync.outputs.has_update == 'true'
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.5'
 
       - name: Build Static Frontend & Re-generate Archives
+        if: steps.sync.outputs.has_update == 'true'
         run: |
           cd client
           npm ci
           npm run build-prod
           cd ..
-          
+
           go build -o AdGuardHome main.go
           GOOS=freebsd GOARCH=amd64 go build -o AdGuardHome_freebsd_amd64 main.go
-          
+
           rm -rf tmp_pkg
           mkdir -p tmp_pkg/AdGuardHome
           cp AdGuardHome tmp_pkg/AdGuardHome/AdGuardHome
           cd tmp_pkg && tar -czvf ../AdGuardHome_linux_amd64.tar.gz AdGuardHome && cd ..
-          
+
           rm -rf tmp_pkg
           mkdir -p tmp_pkg/AdGuardHome
           cp AdGuardHome_freebsd_amd64 tmp_pkg/AdGuardHome/AdGuardHome
           cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
           rm -rf tmp_pkg
 
-      - name: Commit & Push Updated Tarballs
+      - name: Commit Updated Tarballs to Branch
+        if: steps.sync.outputs.has_update == 'true'
         run: |
           git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
           git commit -m "chore(release): Auto-rebuild tarball packages after upstream sync" || true
-          git push origin master
+          git push origin "${{ steps.sync.outputs.branch }}"
+
+      - name: Open Pull Request for Manual Review
+        if: steps.sync.outputs.has_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Sync upstream changes from AdGuardTeam/AdGuardHome"
+          BODY="Automated upstream sync. Review and merge manually."
+          if [ "${{ steps.sync.outputs.conflict }}" = "true" ]; then
+            BODY="$BODY
+
+          ⚠️ Merge conflicts were detected and resolved by keeping this fork's version (-X ours). Please review the diff carefully before merging."
+          fi
+          if [ "${{ steps.sync.outputs.workflows_skipped }}" = "true" ]; then
+            BODY="$BODY
+
+          ⚠️ Upstream changed files under .github/workflows/, which were reverted to this fork's current versions (the automation can't and shouldn't push CI changes on its own). Review these manually if needed:
+          ${{ steps.sync.outputs.wf_list }}"
+          fi
+          gh pr create \
+            --base master \
+            --head "${{ steps.sync.outputs.branch }}" \
+            --title "$TITLE" \
+            --body "$BODY" || echo "PR may already exist for this branch."
