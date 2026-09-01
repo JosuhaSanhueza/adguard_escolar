@@ -119,6 +119,37 @@ func ctDomainOrClientCaseStrict(
 		strings.EqualFold(name, term)
 }
 
+// gamesKeywords, parentalKeywords, and safebrowsingKeywords are the
+// substrings used to recognize why a query was blocked, both from the raw
+// query-log line and from the text of the specific filter rule that matched.
+var (
+	gamesKeywords        = []string{"games", "gamecontrol", "poki"}
+	parentalKeywords     = []string{"nsfw", "porn", "adult", "xvideos", "oisd"}
+	safebrowsingKeywords = []string{
+		"abuse", "malware", "malicious", "threat", "badware", "phishing",
+		"openphish", "urlhaus", "scam", "tif", "security", "rebind",
+	}
+)
+
+// filteringStatusKeywords maps a keyword-based [filteringStatus] to the
+// substrings that identify it in a query-log line or filter rule.
+var filteringStatusKeywords = map[string][]string{
+	filteringStatusBlockedGames:        gamesKeywords,
+	filteringStatusBlockedParental:     parentalKeywords,
+	filteringStatusBlockedSafebrowsing: safebrowsingKeywords,
+}
+
+// containsAny returns true if s contains any of the given substrings.
+func containsAny(s string, substrs []string) bool {
+	for _, sub := range substrs {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func ctDomainOrClientCaseNonStrict(
 	term string,
 	asciiTerm string,
@@ -145,78 +176,68 @@ func (c *searchCriterion) quickMatch(
 ) (ok bool) {
 	switch c.criterionType {
 	case ctTerm:
-		host := readJSONValue(line, `"QH":"`)
-		ip := readJSONValue(line, `"IP":"`)
-		clientID := readJSONValue(line, `"CID":"`)
-
-		var name string
-		if cli := findClient(ctx, logger, clientID, ip); cli != nil {
-			name = cli.Name
-		}
-
-		if c.strict {
-			return ctDomainOrClientCaseStrict(c.value, c.asciiVal, clientID, name, host, ip)
-		}
-
-		return ctDomainOrClientCaseNonStrict(c.value, c.asciiVal, clientID, name, host, ip)
+		return c.quickMatchTerm(ctx, logger, line, findClient)
 	case ctFilteringStatus:
-		switch c.value {
-		case filteringStatusBlockedGames:
-			if !strings.Contains(line, `"IsFiltered":true`) {
-				return false
-			}
-			lowerLine := strings.ToLower(line)
-			return strings.Contains(lowerLine, "games") ||
-				strings.Contains(lowerLine, "gamecontrol") ||
-				strings.Contains(lowerLine, "poki")
-		case filteringStatusBlockedParental:
-			if !strings.Contains(line, `"IsFiltered":true`) {
-				return false
-			}
-			lowerLine := strings.ToLower(line)
-			return strings.Contains(lowerLine, "nsfw") ||
-				strings.Contains(lowerLine, "porn") ||
-				strings.Contains(lowerLine, "adult") ||
-				strings.Contains(lowerLine, "xvideos") ||
-				strings.Contains(lowerLine, "oisd")
-		case filteringStatusBlockedSafebrowsing:
-			if !strings.Contains(line, `"IsFiltered":true`) {
-				return false
-			}
-			lowerLine := strings.ToLower(line)
-			return strings.Contains(lowerLine, "abuse") ||
-				strings.Contains(lowerLine, "malware") ||
-				strings.Contains(lowerLine, "malicious") ||
-				strings.Contains(lowerLine, "threat") ||
-				strings.Contains(lowerLine, "badware") ||
-				strings.Contains(lowerLine, "phishing") ||
-				strings.Contains(lowerLine, "openphish") ||
-				strings.Contains(lowerLine, "urlhaus") ||
-				strings.Contains(lowerLine, "scam") ||
-				strings.Contains(lowerLine, "tif") ||
-				strings.Contains(lowerLine, "security") ||
-				strings.Contains(lowerLine, "rebind")
-		case filteringStatusBlocked:
-			return strings.Contains(line, `"IsFiltered":true`)
-		default:
-			return true
-		}
+		return quickMatchFilteringStatus(line, c.value)
 	case ctReason:
-		reasonCode := readJSONNumericValue(line, `"Reason":`)
-		if reasonCode == "" {
-			// For [filtering.NotFilteredNotFound] reason can be empty.
-			return slices.Contains(c.values, filtering.NotFilteredNotFound.String())
-		}
-
-		idx := slices.Index(reasonCodes[:], reasonCode)
-		if idx == -1 {
-			return false
-		}
-
-		return slices.Contains(c.values, filtering.Reason(idx).String())
+		return c.quickMatchReason(line)
 	default:
 		return true
 	}
+}
+
+// quickMatchTerm is the [ctTerm] case of quickMatch.  logger and findClient
+// must not be nil.
+func (c *searchCriterion) quickMatchTerm(
+	ctx context.Context,
+	logger *slog.Logger,
+	line string,
+	findClient quickMatchClientFunc,
+) (ok bool) {
+	host := readJSONValue(line, `"QH":"`)
+	ip := readJSONValue(line, `"IP":"`)
+	clientID := readJSONValue(line, `"CID":"`)
+
+	var name string
+	if cli := findClient(ctx, logger, clientID, ip); cli != nil {
+		name = cli.Name
+	}
+
+	if c.strict {
+		return ctDomainOrClientCaseStrict(c.value, c.asciiVal, clientID, name, host, ip)
+	}
+
+	return ctDomainOrClientCaseNonStrict(c.value, c.asciiVal, clientID, name, host, ip)
+}
+
+// quickMatchFilteringStatus is the [ctFilteringStatus] case of quickMatch.
+func quickMatchFilteringStatus(line, value string) (ok bool) {
+	if value == filteringStatusBlocked {
+		return strings.Contains(line, `"IsFiltered":true`)
+	}
+
+	keywords, isKeywordStatus := filteringStatusKeywords[value]
+	if !isKeywordStatus {
+		return true
+	}
+
+	return strings.Contains(line, `"IsFiltered":true`) && containsAny(strings.ToLower(line), keywords)
+}
+
+// quickMatchReason is the [ctReason] case of quickMatch.
+func (c *searchCriterion) quickMatchReason(line string) (ok bool) {
+	reasonCode := readJSONNumericValue(line, `"Reason":`)
+	if reasonCode == "" {
+		// For [filtering.NotFilteredNotFound] reason can be empty.
+		return slices.Contains(c.values, filtering.NotFilteredNotFound.String())
+	}
+
+	idx := slices.Index(reasonCodes[:], reasonCode)
+	if idx == -1 {
+		return false
+	}
+
+	return slices.Contains(c.values, filtering.Reason(idx).String())
 }
 
 // match checks if the log entry matches this search criterion.  entry must not
@@ -325,40 +346,26 @@ func matchParentalRule(rules []*filtering.ResultRule) bool {
 	if len(rules) == 0 {
 		return false
 	}
-	rText := strings.ToLower(rules[0].Text)
-	return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
-		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") ||
-		strings.Contains(rText, "oisd")
+
+	return containsAny(strings.ToLower(rules[0].Text), parentalKeywords)
 }
 
 func matchSafebrowsingRule(rules []*filtering.ResultRule) bool {
 	if len(rules) == 0 {
 		return false
 	}
-	rText := strings.ToLower(rules[0].Text)
-	return strings.Contains(rText, "abuse") ||
-		strings.Contains(rText, "malware") ||
-		strings.Contains(rText, "malicious") ||
-		strings.Contains(rText, "threat") ||
-		strings.Contains(rText, "badware") ||
-		strings.Contains(rText, "phishing") ||
-		strings.Contains(rText, "openphish") ||
-		strings.Contains(rText, "urlhaus") ||
-		strings.Contains(rText, "scam") ||
-		strings.Contains(rText, "tif") ||
-		strings.Contains(rText, "security") ||
-		strings.Contains(rText, "rebind")
+
+	return containsAny(strings.ToLower(rules[0].Text), safebrowsingKeywords)
 }
 
+// matchGamesRule reports whether the first rule's text marks the query as
+// blocked by the games block list, GameControl, or "games" specifically.
 func matchGamesRule(rules []*filtering.ResultRule) bool {
 	if len(rules) == 0 {
 		return false
 	}
-	rText := strings.ToLower(rules[0].Text)
-	// Solamente considerar como "Juegos Bloqueados" si la regla contiene marcas específicas de la lista GamesBlockList o GameControl o "games"
-	return strings.Contains(rText, "games") ||
-		strings.Contains(rText, "gamecontrol") ||
-		strings.Contains(rText, "poki")
+
+	return containsAny(strings.ToLower(rules[0].Text), gamesKeywords)
 }
 
 // reasonIsRuleList returns true if r is one of:

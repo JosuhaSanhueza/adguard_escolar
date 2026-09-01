@@ -200,20 +200,31 @@ func matchRuleCategory(rule *filtering.ResultRule) stats.Result {
 	return stats.RNotFiltered
 }
 
+// malwareKeywords, adultKeywords, and gamesKeywords are the substrings used
+// to recognize why a filter rule matched, when the filter list ID itself
+// isn't enough to tell.
+var (
+	malwareKeywords = []string{
+		"abuse", "malware", "malicious", "threat", "badware", "phishing",
+		"openphish", "urlhaus", "scam", "tif", "security", "rebind",
+	}
+	adultKeywords = []string{"nsfw", "porn", "adult", "xvideos", "oisd"}
+	gamesKeywords = []string{"games", "gamecontrol", "poki"}
+)
+
+// containsAny returns true if s contains any of the given substrings.
+func containsAny(s string, substrs []string) bool {
+	for _, sub := range substrs {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func esMalwareRule(fid uint32, rText string) bool {
-	return isMalwareFilterID(fid) ||
-		strings.Contains(rText, "abuse") ||
-		strings.Contains(rText, "malware") ||
-		strings.Contains(rText, "malicious") ||
-		strings.Contains(rText, "threat") ||
-		strings.Contains(rText, "badware") ||
-		strings.Contains(rText, "phishing") ||
-		strings.Contains(rText, "openphish") ||
-		strings.Contains(rText, "urlhaus") ||
-		strings.Contains(rText, "scam") ||
-		strings.Contains(rText, "tif") ||
-		strings.Contains(rText, "security") ||
-		strings.Contains(rText, "rebind")
+	return isMalwareFilterID(fid) || containsAny(rText, malwareKeywords)
 }
 
 func isMalwareFilterID(fid uint32) bool {
@@ -221,10 +232,9 @@ func isMalwareFilterID(fid uint32) bool {
 }
 
 func esAdultRule(rText string) bool {
-	return strings.Contains(rText, "nsfw") || strings.Contains(rText, "porn") ||
-		strings.Contains(rText, "adult") || strings.Contains(rText, "xvideos") || strings.Contains(rText, "oisd")
+	return containsAny(rText, adultKeywords)
 }
 
 func esGamesRule(rText string) bool {
-	return strings.Contains(rText, "games") || strings.Contains(rText, "gamecontrol") || strings.Contains(rText, "poki")
+	return containsAny(rText, gamesKeywords)
 }
