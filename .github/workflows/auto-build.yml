@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   auto-build-release:
@@ -20,6 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git Author
@@ -58,8 +60,36 @@ jobs:
           cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
           rm -rf tmp_pkg
 
-      - name: Commit & Push Updated Release Tarballs
+      - name: Commit Updated Tarballs to Branch
+        id: commit
         run: |
           git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz version.json internal/version/version.go
-          git commit -m "build(release): Automatically update compiled release packages [skip ci]" || true
-          git push origin master
+
+          if git diff --cached --quiet; then
+            echo "Nothing changed, skipping."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BRANCH="auto-build-update"
+          git checkout -b "$BRANCH"
+          git commit -m "build(release): Auto-rebuild release packages [skip ci]"
+          git push origin "$BRANCH" --force
+
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # master is a protected branch (PR + review required), so the rebuilt
+      # tarballs can't be pushed there directly. Land them on a branch and
+      # open a PR instead, for manual review and merge.
+      - name: Open Pull Request for Manual Review
+        if: steps.commit.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base master \
+            --head "${{ steps.commit.outputs.branch }}" \
+            --title "build(release): Auto-rebuild release packages" \
+            --body "Automated tarball rebuild after a push to master. Review and merge manually." \
+            || echo "PR may already exist for this branch."

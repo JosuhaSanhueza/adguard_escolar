@@ -220,6 +220,32 @@ func setupContext(
 
 		os.Exit(osutil.ExitCodeSuccess)
 	}
+
+	if opts.exportProfile != "" {
+		err = exportProfile(confPath, opts.exportProfile)
+		if err != nil {
+			baseLogger.ErrorContext(ctx, "exporting profile", slogutil.KeyError, err)
+
+			os.Exit(osutil.ExitCodeFailure)
+		}
+
+		baseLogger.InfoContext(ctx, "profile exported", "path", opts.exportProfile)
+
+		os.Exit(osutil.ExitCodeSuccess)
+	}
+
+	if opts.importProfile != "" {
+		err = importProfile(confPath, opts.importProfile)
+		if err != nil {
+			baseLogger.ErrorContext(ctx, "importing profile", slogutil.KeyError, err)
+
+			os.Exit(osutil.ExitCodeFailure)
+		}
+
+		baseLogger.InfoContext(ctx, "profile imported, restart AdGuard Home to apply it")
+
+		os.Exit(osutil.ExitCodeSuccess)
+	}
 }
 
 // logIfUnsupported logs a formatted warning if the error is one of the

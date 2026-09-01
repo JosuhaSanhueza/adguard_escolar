@@ -625,51 +625,73 @@ func (u *Updater) unpackZip(
 	return files, err
 }
 
-// copyFile copies a file from src to dst with the specified permissions.
+// copyFile copies a file from src to dst with the specified permissions.  It
+// writes to a temporary file first and then swaps it into place, so that a
+// concurrent reader never observes a partially-written dst.
 func copyFile(src, dst string, perm fs.FileMode) (err error) {
 	d, err := os.ReadFile(src)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", src, err)
 	}
 
-	dir := filepath.Dir(dst)
-	tmpDst, err := os.CreateTemp(dir, filepath.Base(dst)+".*.tmp")
+	tmpName, err := writeTempFile(dst, d, perm)
 	if err != nil {
-		tmpDst, err = os.CreateTemp("", filepath.Base(dst)+".*.tmp")
-		if err != nil {
-			return fmt.Errorf("creating temp file for %s: %w", dst, err)
-		}
-	}
-	tmpName := tmpDst.Name()
-
-	_, err = tmpDst.Write(d)
-	_ = tmpDst.Close()
-	if err != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("writing temp file %s: %w", tmpName, err)
+		return err
 	}
 
-	_ = os.Chmod(tmpName, perm)
-
-	// Try atomic rename first
-	err = os.Rename(tmpName, dst)
-	if err != nil {
-		// If rename fails (e.g. target exists/running or cross-device), remove target first then rename
-		_ = os.Remove(dst)
-		err = os.Rename(tmpName, dst)
-		if err != nil {
-			// Fallback: write directly to dst after remove
-			err = os.WriteFile(dst, d, perm)
-			_ = os.Remove(tmpName)
-			if err != nil {
-				return fmt.Errorf("replacing file %s: %w", dst, err)
-			}
-		}
+	if err = replaceFile(tmpName, dst, d, perm); err != nil {
+		return fmt.Errorf("replacing file %s: %w", dst, err)
 	}
 
 	_ = os.Chmod(dst, perm)
 
 	return nil
+}
+
+// writeTempFile writes data to a new temporary file next to dst, falling
+// back to the OS temporary directory if that isn't possible, and returns the
+// temporary file's path.
+func writeTempFile(dst string, data []byte, perm fs.FileMode) (tmpName string, err error) {
+	dir := filepath.Dir(dst)
+	tmpDst, err := os.CreateTemp(dir, filepath.Base(dst)+".*.tmp")
+	if err != nil {
+		tmpDst, err = os.CreateTemp("", filepath.Base(dst)+".*.tmp")
+		if err != nil {
+			return "", fmt.Errorf("creating temp file for %s: %w", dst, err)
+		}
+	}
+	tmpName = tmpDst.Name()
+
+	_, err = tmpDst.Write(data)
+	_ = tmpDst.Close()
+	if err != nil {
+		_ = os.Remove(tmpName)
+
+		return "", fmt.Errorf("writing temp file %s: %w", tmpName, err)
+	}
+
+	_ = os.Chmod(tmpName, perm)
+
+	return tmpName, nil
+}
+
+// replaceFile moves tmpName to dst.  If dst is busy or on a different
+// device, it retries after removing dst, and if that still fails, it falls
+// back to writing data to dst directly.
+func replaceFile(tmpName, dst string, data []byte, perm fs.FileMode) (err error) {
+	if err = os.Rename(tmpName, dst); err == nil {
+		return nil
+	}
+
+	_ = os.Remove(dst)
+	if err = os.Rename(tmpName, dst); err == nil {
+		return nil
+	}
+
+	err = os.WriteFile(dst, data, perm)
+	_ = os.Remove(tmpName)
+
+	return err
 }
 
 // copySupportingFiles copies each file specified in files from srcdir to

@@ -87,6 +87,18 @@ type options struct {
 	// noPermCheck disables checking and migration of permissions for the
 	// security-sensitive files.
 	noPermCheck bool
+
+	// exportProfile, if set, makes AdGuard Home write the portable subset of
+	// its configuration (DNS behavior, blocklists, blocked services, safe
+	// search, cache, query log and statistics retention) to this path and
+	// exit, without touching installation-specific settings.
+	exportProfile string
+
+	// importProfile, if set, makes AdGuard Home merge a profile file
+	// previously created with exportProfile into its configuration file and
+	// exit. Installation-specific settings (bind address, users, TLS, DHCP,
+	// clients) are left untouched.
+	importProfile string
 }
 
 // initCmdLineOpts completes initialization of the global command-line option
@@ -244,6 +256,35 @@ var cmdLineOpts = []cmdLineOpt{{
 	description:     "Check configuration and exit.",
 	longName:        "check-config",
 	shortName:       "",
+}, {
+	updateWithValue: func(o options, v string) (options, error) {
+		o.exportProfile = v
+		return o, nil
+	},
+	updateNoValue: nil,
+	effect:        nil,
+	serialize: func(o options) (val string, ok bool) {
+		return o.exportProfile, o.exportProfile != ""
+	},
+	description: "Write the portable configuration profile (DNS, blocklists, " +
+		"blocked services, safe search, cache, log retention) to the given " +
+		"file and exit.",
+	longName:  "export-profile",
+	shortName: "",
+}, {
+	updateWithValue: func(o options, v string) (options, error) {
+		o.importProfile = v
+		return o, nil
+	},
+	updateNoValue: nil,
+	effect:        nil,
+	serialize: func(o options) (val string, ok bool) {
+		return o.importProfile, o.importProfile != ""
+	},
+	description: "Merge the given configuration profile file into the " +
+		"configuration and exit. Run this after finishing the setup wizard.",
+	longName:  "import-profile",
+	shortName: "",
 }, {
 	updateWithValue: nil,
 	updateNoValue:   func(o options) (options, error) { o.disableUpdate = true; return o, nil },
