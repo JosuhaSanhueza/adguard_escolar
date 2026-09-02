@@ -31,6 +31,10 @@ type DefaultManager struct {
 	updates chan UpdateSignal
 	watcher aghos.FSWatcher
 	pair    TLSPair
+
+	// shutdownOnce guards against closing updates more than once if
+	// Shutdown is called multiple times.
+	shutdownOnce sync.Once
 }
 
 // NewDefaultManager returns a new properly initialized default manager.
@@ -126,10 +130,13 @@ func (mgr *DefaultManager) Start(ctx context.Context) (err error) {
 }
 
 // Shutdown implements the [service.Interface] interface for *DefaultManager.
+// It is safe to call more than once; only the first call has any effect.
 func (mgr *DefaultManager) Shutdown(ctx context.Context) (err error) {
-	defer close(mgr.updates)
+	mgr.shutdownOnce.Do(func() {
+		defer close(mgr.updates)
 
-	err = mgr.watcher.Shutdown(ctx)
+		err = mgr.watcher.Shutdown(ctx)
+	})
 	if err != nil {
 		return fmt.Errorf("shutting down watcher: %w", err)
 	}

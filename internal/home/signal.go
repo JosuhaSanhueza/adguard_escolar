@@ -42,6 +42,11 @@ type signalHandler struct {
 	// cleanup is called to perform cleanup on all incoming signals, except
 	// SIGHUP.
 	cleanup func(ctx context.Context)
+
+	// shutdownOnce ensures that shutdown only runs once, so that a second
+	// termination signal received while shutting down (e.g. a double
+	// Ctrl+C) doesn't re-run cleanup against already-closed resources.
+	shutdownOnce sync.Once
 }
 
 // newSignalHandler returns a new properly initialized *signalHandler.
@@ -111,8 +116,16 @@ func (h *signalHandler) handle(ctx context.Context) {
 	}
 }
 
-// shutdown shuts the system down.
+// shutdown shuts the system down.  It is safe to call more than once (e.g.
+// when a second termination signal arrives while already shutting down);
+// only the first call has any effect.
 func (h *signalHandler) shutdown(ctx context.Context) {
+	h.shutdownOnce.Do(func() { h.shutdownOnceImpl(ctx) })
+}
+
+// shutdownOnceImpl performs the actual shutdown sequence.  It must only be
+// called through h.shutdownOnce.
+func (h *signalHandler) shutdownOnceImpl(ctx context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

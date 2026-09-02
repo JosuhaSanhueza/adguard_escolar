@@ -20,7 +20,8 @@ rm -rf /usr/local/bin/AdGuardHome \
        /usr/local/opnsense/service/conf/actions.d/actions_adguardhome.conf \
        /usr/local/etc/inc/plugins.inc.d/adguardhome.inc
 
-echo "disabling adguardhome service in rc.conf..."
+echo "disabling AdGuardHome service in rc.conf..."
+sysrc -x AdGuardHome_enable 2>/dev/null || true
 sysrc -x adguardhome_enable 2>/dev/null || true
 
 echo "AdGuard Home has been completely removed from this system."
