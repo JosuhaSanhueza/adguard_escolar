@@ -696,6 +696,25 @@ class Api {
 
         return this.makeRequest(path, method);
     }
+
+    // Configuration profile (DNS/filtering settings, portable between
+    // installations -- not to be confused with the user's login profile
+    // above).
+    CONFIG_PROFILE_EXPORT = { path: 'config_profile/export', method: 'GET' };
+
+    CONFIG_PROFILE_IMPORT = { path: 'config_profile/import', method: 'POST' };
+
+    getConfigProfileExportUrl() {
+        const { path } = this.CONFIG_PROFILE_EXPORT;
+
+        return `${this.baseUrl}/${path}`;
+    }
+
+    importConfigProfile(profile: string) {
+        const { path, method } = this.CONFIG_PROFILE_IMPORT;
+
+        return this.makeRequest(path, method, { data: { profile } });
+    }
 }
 
 const apiClient = new Api();

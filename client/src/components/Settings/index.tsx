@@ -8,6 +8,8 @@ import LogsConfig from './LogsConfig';
 
 import { FiltersConfig } from './FiltersConfig';
 
+import { ConfigProfile } from './ConfigProfile';
+
 import { Checkbox } from '../ui/Controls/Checkbox';
 
 import Loading from '../ui/Loading';
@@ -198,6 +200,10 @@ class Settings extends Component<SettingsProps> {
                                     setStatsConfig={setStatsConfig}
                                     resetStats={resetStats}
                                 />
+                            </div>
+
+                            <div className="col-md-12">
+                                <ConfigProfile />
                             </div>
                         </div>
                     </div>
