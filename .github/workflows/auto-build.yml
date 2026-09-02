@@ -45,10 +45,18 @@ jobs:
           npm ci
           npm run build-prod
           cd ..
-          
-          go build -o AdGuardHome main.go
-          GOOS=freebsd GOARCH=amd64 go build -o AdGuardHome_freebsd_amd64 main.go
-          
+
+          # Bake version.json's version into the binary, so the running
+          # instance reports the same version it was told to update to
+          # (otherwise the update banner never goes away, since it compares
+          # this string against version.json).
+          version_pkg='github.com/AdguardTeam/AdGuardHome/internal/version'
+          version=$(python3 -c "import json; print(json.load(open('version.json'))['version'])")
+          ldflags="-X ${version_pkg}.version=${version}"
+
+          go build -ldflags "$ldflags" -o AdGuardHome main.go
+          GOOS=freebsd GOARCH=amd64 go build -ldflags "$ldflags" -o AdGuardHome_freebsd_amd64 main.go
+
           rm -rf tmp_pkg
           mkdir -p tmp_pkg/AdGuardHome
           cp AdGuardHome tmp_pkg/AdGuardHome/AdGuardHome
