@@ -361,7 +361,10 @@ func handleServiceInstallCmd(
 func ensureOPNsenseServiceFiles(ctx context.Context, l *slog.Logger) {
 	if _, err := os.Stat("/etc/rc.conf.d"); err == nil || os.IsNotExist(err) {
 		_ = os.MkdirAll("/etc/rc.conf.d", 0o755)
-		_ = os.WriteFile("/etc/rc.conf.d/adguardhome", []byte("adguardhome_enable=\"YES\"\n"), 0o644)
+		// The variable name must match rc.d's name="AdGuardHome" (serviceName)
+		// exactly, case included, or rc.conf.d/adguardhome_enable is silently
+		// ignored and `service AdGuardHome start/status` never finds it enabled.
+		_ = os.WriteFile("/etc/rc.conf.d/adguardhome", []byte(serviceName+"_enable=\"YES\"\n"), 0o644)
 	}
 
 	// 1. OPNsense official boot hook (rc.syshook system)
