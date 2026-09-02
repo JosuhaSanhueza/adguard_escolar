@@ -55,19 +55,18 @@ var profileExcludedNestedKeys = map[string][]string{
 // manipulate the configuration file without depending on its full Go schema.
 type yamlMap = map[string]any
 
-// exportProfile reads the configuration file at confPath and writes the
-// subset of it that is safe to reuse on another installation to outPath.
-func exportProfile(confPath, outPath string) (err error) {
-	defer func() { err = errors.Annotate(err, "exporting profile: %w") }()
-
+// buildProfileYAML reads the configuration file at confPath and returns the
+// YAML-encoded subset of it that is safe to reuse on another installation,
+// with profileHeader prepended.
+func buildProfileYAML(confPath string) (profileYAML []byte, err error) {
 	data, err := os.ReadFile(confPath)
 	if err != nil {
-		return fmt.Errorf("reading config file: %w", err)
+		return nil, fmt.Errorf("reading config file: %w", err)
 	}
 
 	full := yamlMap{}
 	if err = yaml.Unmarshal(data, &full); err != nil {
-		return fmt.Errorf("parsing config file: %w", err)
+		return nil, fmt.Errorf("parsing config file: %w", err)
 	}
 
 	profile := yamlMap{}
@@ -90,41 +89,48 @@ func exportProfile(confPath, outPath string) (err error) {
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)
 	if err = enc.Encode(profile); err != nil {
-		return fmt.Errorf("encoding profile: %w", err)
+		return nil, fmt.Errorf("encoding profile: %w", err)
 	}
 
-	if err = maybe.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
+	return buf.Bytes(), nil
+}
+
+// exportProfile reads the configuration file at confPath and writes the
+// subset of it that is safe to reuse on another installation to outPath.
+func exportProfile(confPath, outPath string) (err error) {
+	defer func() { err = errors.Annotate(err, "exporting profile: %w") }()
+
+	profileYAML, err := buildProfileYAML(confPath)
+	if err != nil {
+		return err
+	}
+
+	if err = maybe.WriteFile(outPath, profileYAML, 0o644); err != nil {
 		return fmt.Errorf("writing profile file: %w", err)
 	}
 
 	return nil
 }
 
-// importProfile reads a profile file previously produced by exportProfile
-// and merges it into the configuration file at confPath, preserving every
-// installation-specific setting already present there (bind address, users,
-// tls, dhcp, os, clients, and the excluded nested keys above).
-func importProfile(confPath, profilePath string) (err error) {
-	defer func() { err = errors.Annotate(err, "importing profile: %w") }()
-
+// mergeProfileYAML reads the configuration file at confPath, merges
+// profileYAML (as produced by buildProfileYAML) into it, and returns the
+// resulting YAML, preserving every installation-specific setting already
+// present in confPath (bind address, users, tls, dhcp, os, clients, and the
+// excluded nested keys above).
+func mergeProfileYAML(confPath string, profileYAML []byte) (mergedYAML []byte, err error) {
 	targetData, err := os.ReadFile(confPath)
 	if err != nil {
-		return fmt.Errorf("reading config file: %w", err)
+		return nil, fmt.Errorf("reading config file: %w", err)
 	}
 
 	target := yamlMap{}
 	if err = yaml.Unmarshal(targetData, &target); err != nil {
-		return fmt.Errorf("parsing config file: %w", err)
-	}
-
-	profileData, err := os.ReadFile(profilePath)
-	if err != nil {
-		return fmt.Errorf("reading profile file: %w", err)
+		return nil, fmt.Errorf("parsing config file: %w", err)
 	}
 
 	profile := yamlMap{}
-	if err = yaml.Unmarshal(profileData, &profile); err != nil {
-		return fmt.Errorf("parsing profile file: %w", err)
+	if err = yaml.Unmarshal(profileYAML, &profile); err != nil {
+		return nil, fmt.Errorf("parsing profile: %w", err)
 	}
 
 	mergeYAMLMaps(target, profile)
@@ -133,10 +139,29 @@ func importProfile(confPath, profilePath string) (err error) {
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)
 	if err = enc.Encode(target); err != nil {
-		return fmt.Errorf("encoding merged config: %w", err)
+		return nil, fmt.Errorf("encoding merged config: %w", err)
 	}
 
-	if err = maybe.WriteFile(confPath, buf.Bytes(), 0o644); err != nil {
+	return buf.Bytes(), nil
+}
+
+// importProfile reads a profile file previously produced by exportProfile
+// and merges it into the configuration file at confPath.  See
+// mergeProfileYAML for details on what is and isn't overwritten.
+func importProfile(confPath, profilePath string) (err error) {
+	defer func() { err = errors.Annotate(err, "importing profile: %w") }()
+
+	profileYAML, err := os.ReadFile(profilePath)
+	if err != nil {
+		return fmt.Errorf("reading profile file: %w", err)
+	}
+
+	mergedYAML, err := mergeProfileYAML(confPath, profileYAML)
+	if err != nil {
+		return err
+	}
+
+	if err = maybe.WriteFile(confPath, mergedYAML, 0o644); err != nil {
 		return fmt.Errorf("writing config file: %w", err)
 	}
 

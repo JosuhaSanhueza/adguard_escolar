@@ -208,6 +208,12 @@ func (web *webAPI) registerControlHandlers() {
 	web.httpReg.Register(http.MethodGet, "/control/profile", web.handleGetProfile)
 	web.httpReg.Register(http.MethodPut, "/control/profile/update", web.handlePutProfile)
 
+	// config_profile is unrelated to the user's login profile (/control/profile
+	// above): it's the portable DNS/filtering configuration profile, see
+	// internal/home/profile.go.
+	web.httpReg.Register(http.MethodGet, "/control/config_profile/export", web.handleConfigProfileExport)
+	web.httpReg.Register(http.MethodPost, "/control/config_profile/import", web.handleConfigProfileImport)
+
 	mobileConfHandler := newMobileConfigHandler(&mobileConfigHandlerConfig{
 		logger: web.baseLogger,
 	})
