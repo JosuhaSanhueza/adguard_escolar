@@ -80,23 +80,31 @@ fi
 log 'unpacking'
 tar -C "$tmp_dir" -x -z -f "${tmp_dir}/${pkg_name}"
 
+was_installed=0
 if [ -x "${install_dir}/AdGuardHome" ]; then
+	was_installed=1
 	log "existing installation found at ${install_dir}, stopping it before replacing the binary"
 	"${install_dir}/AdGuardHome" -s stop 2>/dev/null || true
 fi
+readonly was_installed
 
 mkdir -p "$install_dir"
 install -m 0755 "${tmp_dir}/AdGuardHome/AdGuardHome" "${install_dir}/AdGuardHome"
 
-log "registering and starting the system service"
 cd "$install_dir"
-if [ -x "${install_dir}/AdGuardHome" ] && "${install_dir}/AdGuardHome" -s status >/dev/null 2>&1; then
-	# Already installed as a service (e.g. reinstall/update): just restart it
-	# to pick up the new binary.
-	./AdGuardHome -s restart
-else
-	./AdGuardHome -s install
+
+if [ "$was_installed" -eq 1 ]; then
+	# Re-register the service from scratch with the new binary, rather than
+	# using its own -s restart: restarting immediately after the manual stop
+	# above raced with the OS releasing the old process's port/pidfile and
+	# failed outright on FreeBSD. Uninstall-then-install sidesteps that.
+	log "re-registering the system service with the new binary"
+	./AdGuardHome -s uninstall 2>/dev/null || true
+	sleep 1
 fi
+
+log "registering and starting the system service"
+./AdGuardHome -s install
 
 cat <<EOF
 
