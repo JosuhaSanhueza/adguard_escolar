@@ -1,6 +1,7 @@
 package dnsforward
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -186,6 +187,44 @@ func (s *Server) accessListJSON() (j accessListJSON) {
 // handleAccessList handles requests to the GET /control/access/list endpoint.
 func (s *Server) handleAccessList(w http.ResponseWriter, r *http.Request) {
 	aghhttp.WriteJSONResponseOK(r.Context(), s.logger, w, r, s.accessListJSON())
+}
+
+// DisallowedClients returns a copy of the current disallowed-clients access
+// list (IPs, CIDRs, and ClientIDs whose DNS queries are all dropped).
+func (s *Server) DisallowedClients() (clients []string) {
+	s.serverLock.RLock()
+	defer s.serverLock.RUnlock()
+
+	return slices.Clone(s.conf.DisallowedClients)
+}
+
+// SetDisallowedClients replaces the disallowed-clients access list and
+// applies it immediately, persisting the change same as
+// [Server.handleAccessSet] does for the Access settings page.
+//
+// ConfModifier.Apply is called only after serverLock is released (same
+// ordering as handleAccessSet, achieved there via defer order): Apply reads
+// the server's config back, and calling it while still holding the write
+// lock would deadlock.
+func (s *Server) SetDisallowedClients(ctx context.Context, clients []string) (err error) {
+	defer func() {
+		if err == nil {
+			s.conf.ConfModifier.Apply(ctx)
+		}
+	}()
+
+	s.serverLock.Lock()
+	defer s.serverLock.Unlock()
+
+	a, err := newAccessCtx(s.conf.AllowedClients, clients, s.conf.BlockedHosts)
+	if err != nil {
+		return fmt.Errorf("creating access ctx: %w", err)
+	}
+
+	s.conf.DisallowedClients = clients
+	s.access = a
+
+	return nil
 }
 
 // validateAccessSet checks the internal accessListJSON lists.  To search for
