@@ -233,23 +233,11 @@ func handleGameControlInternetToggleAll(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rangeHosts := gameControlgameControlMgr.getHosts()
-	clients := dnsServer.DisallowedClients()
-
-	if req.Blocked {
-		for _, h := range rangeHosts {
-			if !slices.Contains(clients, h.IP) {
-				clients = append(clients, h.IP)
-			}
-		}
-	} else {
-		rangeIPs := make(map[string]bool, len(rangeHosts))
-		for _, h := range rangeHosts {
-			rangeIPs[h.IP] = true
-		}
-
-		clients = slices.DeleteFunc(clients, func(c string) bool { return rangeIPs[c] })
-	}
+	clients := withRangeDisallowed(
+		dnsServer.DisallowedClients(),
+		gameControlgameControlMgr.getHosts(),
+		req.Blocked,
+	)
 
 	if err := dnsServer.SetDisallowedClients(ctx, clients); err != nil {
 		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusInternalServerError, "%s", err)
@@ -258,6 +246,27 @@ func handleGameControlInternetToggleAll(w http.ResponseWriter, r *http.Request) 
 	}
 
 	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+}
+
+// withRangeDisallowed returns clients with every host in rangeHosts added
+// (blocked=true) or removed (blocked=false).
+func withRangeDisallowed(clients []string, rangeHosts []GameControlHost, blocked bool) []string {
+	if blocked {
+		for _, h := range rangeHosts {
+			if !slices.Contains(clients, h.IP) {
+				clients = append(clients, h.IP)
+			}
+		}
+
+		return clients
+	}
+
+	rangeIPs := make(map[string]bool, len(rangeHosts))
+	for _, h := range rangeHosts {
+		rangeIPs[h.IP] = true
+	}
+
+	return slices.DeleteFunc(clients, func(c string) bool { return rangeIPs[c] })
 }
 
 type updateHostReq struct {
