@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,9 +20,14 @@ const (
 
 // GameControlHost represents an individual host state within the GameControl range.
 type GameControlHost struct {
-	IP      string `json:"ip"`
-	Host    string `json:"host"`
-	Blocked bool   `json:"blocked"`
+	IP   string `json:"ip"`
+	Host string `json:"host"`
+	// Blocked reflects the games/entertainment blocklist for this host.
+	Blocked bool `json:"blocked"`
+	// InternetBlocked is true if this host's IP is in the DNS access
+	// settings' disallowed-clients list, meaning it has no DNS resolution
+	// at all.  See [handleGameControlInternetToggleHost].
+	InternetBlocked bool `json:"internet_blocked"`
 }
 
 // GameControlConfig represents the settings and current status for GameControl.
@@ -56,6 +62,16 @@ func initGameControl(webReg aghhttp.Registrar) {
 	webReg.Register(http.MethodPost, "/control/gamecontrol/update_host", handleGameControlUpdateHost)
 	webReg.Register(http.MethodPost, "/control/gamecontrol/toggle_all", handleGameControlToggleAll)
 	webReg.Register(http.MethodPost, "/control/gamecontrol/config", handleGameControlUpdateConfig)
+	webReg.Register(
+		http.MethodPost,
+		"/control/gamecontrol/internet/toggle_host",
+		handleGameControlInternetToggleHost,
+	)
+	webReg.Register(
+		http.MethodPost,
+		"/control/gamecontrol/internet/toggle_all",
+		handleGameControlInternetToggleAll,
+	)
 }
 
 type gameControlStatusResp struct {
@@ -127,7 +143,121 @@ func handleGameControlStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	gameControlgameControlMgr.mu.RUnlock()
 
+	if dnsServer := globalContext.dnsServer; dnsServer != nil {
+		disallowed := dnsServer.DisallowedClients()
+		for i, h := range resp.Hosts {
+			resp.Hosts[i].InternetBlocked = slices.Contains(disallowed, h.IP)
+		}
+	}
+
 	aghhttp.WriteJSONResponseOK(r.Context(), nil, w, r, resp)
+}
+
+// internetToggleHostReq is the request body for
+// POST /control/gamecontrol/internet/toggle_host.
+type internetToggleHostReq struct {
+	IP      string `json:"ip"`
+	Blocked bool   `json:"blocked"`
+}
+
+// handleGameControlInternetToggleHost adds or removes a single host's IP
+// from the DNS access settings' disallowed-clients list, which drops all of
+// its DNS queries (not just games/entertainment).  This is meant as a quick,
+// reversible way to cut a misbehaving lab PC off the internet entirely,
+// without leaving the GameControl page.
+func handleGameControlInternetToggleHost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	req := &internetToggleHostReq{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+
+		return
+	}
+
+	dnsServer := globalContext.dnsServer
+	if dnsServer == nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusServiceUnavailable, "dns server is not ready")
+
+		return
+	}
+
+	clients := dnsServer.DisallowedClients()
+	isDisallowed := slices.Contains(clients, req.IP)
+
+	switch {
+	case req.Blocked && !isDisallowed:
+		clients = append(clients, req.IP)
+	case !req.Blocked && isDisallowed:
+		clients = slices.DeleteFunc(clients, func(c string) bool { return c == req.IP })
+	default:
+		// Already in the desired state; nothing to do.
+		aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+
+		return
+	}
+
+	if err := dnsServer.SetDisallowedClients(ctx, clients); err != nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusInternalServerError, "%s", err)
+
+		return
+	}
+
+	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+}
+
+// internetToggleAllReq is the request body for
+// POST /control/gamecontrol/internet/toggle_all.
+type internetToggleAllReq struct {
+	Blocked bool `json:"blocked"`
+}
+
+// handleGameControlInternetToggleAll adds or removes every host currently
+// configured in the GameControl IP range from the DNS access settings'
+// disallowed-clients list in a single update, cutting off (or restoring) the
+// whole lab's internet access at once.
+func handleGameControlInternetToggleAll(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	req := &internetToggleAllReq{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+
+		return
+	}
+
+	dnsServer := globalContext.dnsServer
+	if dnsServer == nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusServiceUnavailable, "dns server is not ready")
+
+		return
+	}
+
+	rangeHosts := gameControlgameControlMgr.getHosts()
+	clients := dnsServer.DisallowedClients()
+
+	if req.Blocked {
+		for _, h := range rangeHosts {
+			if !slices.Contains(clients, h.IP) {
+				clients = append(clients, h.IP)
+			}
+		}
+	} else {
+		rangeIPs := make(map[string]bool, len(rangeHosts))
+		for _, h := range rangeHosts {
+			rangeIPs[h.IP] = true
+		}
+
+		clients = slices.DeleteFunc(clients, func(c string) bool { return rangeIPs[c] })
+	}
+
+	if err := dnsServer.SetDisallowedClients(ctx, clients); err != nil {
+		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusInternalServerError, "%s", err)
+
+		return
+	}
+
+	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
 }
 
 type updateHostReq struct {
