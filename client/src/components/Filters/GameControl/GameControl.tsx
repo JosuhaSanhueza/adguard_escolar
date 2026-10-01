@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PageTitle from '../../ui/PageTitle';
 import Card from '../../ui/Card';
+import './GameControl.css';
 
 interface GameHost {
     ip: string;
@@ -121,29 +122,29 @@ const GameControl: React.FC = () => {
                                     {status.enabled ? 'Activo' : 'Inactivo'}
                                 </span>
                             </div>
-                            <div className="d-flex flex-column align-items-md-end gap-3">
-                                <div className="d-flex align-items-center flex-wrap gap-2">
-                                    <span className="font-weight-bold text-muted mr-1">Juegos:</span>
+                            <div>
+                                <div className="gamecontrol-bulk-row mb-2">
+                                    <span className="font-weight-bold text-muted">Juegos:</span>
                                     <button
-                                        className="btn btn-danger"
+                                        className="btn btn-danger gamecontrol-bulk-btn"
                                         onClick={() => handleToggleAll(true)}>
                                         Bloquear Todo el Laboratorio
                                     </button>
                                     <button
-                                        className="btn btn-success"
+                                        className="btn btn-success gamecontrol-bulk-btn"
                                         onClick={() => handleToggleAll(false)}>
                                         Desbloquear Todo el Laboratorio
                                     </button>
                                 </div>
-                                <div className="d-flex align-items-center flex-wrap gap-2">
-                                    <span className="font-weight-bold text-muted mr-1">Internet:</span>
+                                <div className="gamecontrol-bulk-row">
+                                    <span className="font-weight-bold text-muted">Internet:</span>
                                     <button
-                                        className="btn btn-danger"
+                                        className="btn btn-danger gamecontrol-bulk-btn"
                                         onClick={() => handleToggleInternetAll(true)}>
                                         Cortar Todo el Laboratorio
                                     </button>
                                     <button
-                                        className="btn btn-success"
+                                        className="btn btn-success gamecontrol-bulk-btn"
                                         onClick={() => handleToggleInternetAll(false)}>
                                         Restaurar Todo el Laboratorio
                                     </button>
@@ -246,14 +247,16 @@ const GameControl: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className="text-right">
-                                                <div className="d-flex justify-content-end flex-wrap gap-2">
+                                                <div className="gamecontrol-row-actions">
                                                     <button
-                                                        className={`btn btn-sm ${h.blocked ? 'btn-success' : 'btn-danger'}`}
+                                                        className={`btn btn-sm gamecontrol-row-btn ${
+                                                            h.blocked ? 'btn-success' : 'btn-danger'
+                                                        }`}
                                                         onClick={() => handleToggleHost(h.ip, h.blocked)}>
                                                         {h.blocked ? 'Permitir Acceso' : 'Bloquear Acceso'}
                                                     </button>
                                                     <button
-                                                        className={`btn btn-sm ${
+                                                        className={`btn btn-sm gamecontrol-row-btn ${
                                                             h.internet_blocked ? 'btn-success' : 'btn-danger'
                                                         }`}
                                                         onClick={() =>
