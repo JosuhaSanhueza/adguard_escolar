@@ -1,0 +1,43 @@
+/* GameControl's base framework (Tabler.css) doesn't define a `.gap-*`
+ * utility, so plain Bootstrap-5-style gap classes have no effect here.
+ * These classes give the bulk and per-row action buttons real spacing and
+ * a consistent, equal size so paired buttons (block/unblock, cut/restore)
+ * line up instead of looking stuck together. */
+
+.gamecontrol-bulk-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.gamecontrol-bulk-row > * {
+    margin-right: 8px;
+}
+
+.gamecontrol-bulk-row > *:last-child {
+    margin-right: 0;
+}
+
+.gamecontrol-bulk-btn {
+    min-width: 220px;
+}
+
+.gamecontrol-row-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.gamecontrol-row-actions > * {
+    margin-right: 8px;
+}
+
+.gamecontrol-row-actions > *:last-child {
+    margin-right: 0;
+}
+
+.gamecontrol-row-btn {
+    min-width: 140px;
+}
