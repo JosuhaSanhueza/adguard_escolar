@@ -13,8 +13,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New version, e.g. v1.1.13'
-        required: true
+        description: 'New version, e.g. v1.1.13. Leave empty to auto-increment the patch number.'
+        required: false
         type: string
       announcement:
         description: 'Spanish announcement shown in the update banner'
@@ -40,7 +40,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Write version.json
+      - name: Determine and write version.json
+        id: version
         env:
           NEW_VERSION: ${{ inputs.version }}
           NEW_ANNOUNCEMENT: ${{ inputs.announcement }}
@@ -48,16 +49,33 @@ jobs:
           python3 - <<'PYEOF'
           import json
           import os
+          import re
 
           with open("version.json") as f:
               data = json.load(f)
 
-          data["version"] = os.environ["NEW_VERSION"]
+          new_version = os.environ.get("NEW_VERSION", "").strip()
+          if not new_version:
+              current = data["version"]
+              m = re.match(r"^(v\d+\.\d+\.)(\d+)$", current)
+              if not m:
+                  raise SystemExit(
+                      f"cannot auto-increment version {current!r}: expected vMAJOR.MINOR.PATCH"
+                  )
+              new_version = f"{m.group(1)}{int(m.group(2)) + 1}"
+              print(f"::notice::No version given, auto-incrementing {current} -> {new_version}")
+          else:
+              print(f"::notice::Using given version {new_version}")
+
+          data["version"] = new_version
           data["announcement"] = os.environ["NEW_ANNOUNCEMENT"]
 
           with open("version.json", "w") as f:
               json.dump(data, f, indent=2)
               f.write("\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"version={new_version}\n")
           PYEOF
 
       - name: Set up Node.js
@@ -102,7 +120,7 @@ jobs:
       - name: Commit version bump and rebuilt tarballs together
         id: commit
         env:
-          NEW_VERSION: ${{ inputs.version }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           git add version.json AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
 
@@ -129,7 +147,7 @@ jobs:
         if: steps.commit.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ inputs.version }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
           gh pr create \
             --base master \
