@@ -286,7 +286,7 @@ func (a *auth) upsertTeacher(
 			return errors.Error("la contraseña no puede estar vacía")
 		}
 	case !existing.IsTeacher():
-		return errors.Error("ese usuario existe y no es un profesor")
+		return errors.Error("ese usuario existe y no es un docente")
 	default:
 		u.ID = existing.ID
 		u.Password = existing.Password

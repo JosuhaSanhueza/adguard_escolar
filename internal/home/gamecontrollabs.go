@@ -194,7 +194,7 @@ func (web *webAPI) handleLabDelete(w http.ResponseWriter, r *http.Request) {
 	if t := web.teacherOfLab(ctx, req.ID); t != "" {
 		aghhttp.ErrorAndLog(
 			ctx, slog.Default(), r, w, http.StatusConflict,
-			"el laboratorio tiene al profesor %q asignado; elimínalo primero", t,
+			"el laboratorio tiene al docente %q asignado; elimínalo primero", t,
 		)
 
 		return
@@ -297,7 +297,7 @@ func (web *webAPI) saveTeacher(ctx context.Context, req *teacherSaveReq) (err er
 	}
 
 	if other := web.teacherOfLab(ctx, req.LabID); other != "" && other != string(login) {
-		return fmt.Errorf("el laboratorio ya tiene al profesor %q asignado", other)
+		return fmt.Errorf("el laboratorio ya tiene al docente %q asignado", other)
 	}
 
 	if req.Password != "" && len(req.Password) < minTeacherPasswordLen {
@@ -325,7 +325,7 @@ func (web *webAPI) handleTeacherDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !web.auth.deleteTeacher(ctx, aghuser.Login(req.Login)) {
-		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusNotFound, "profesor no encontrado")
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusNotFound, "docente no encontrado")
 
 		return
 	}
