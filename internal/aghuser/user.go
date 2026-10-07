@@ -39,9 +39,6 @@ type User struct {
 	// Login is the login name of the web user.  It must not be empty.
 	Login Login
 
-	// ID is the unique identifier for the web user.  It must not be empty.
-	ID UserID
-
 	// Role is the role of the web user.  Empty means a full administrator;
 	// see [RoleTeacher].
 	Role string
@@ -49,6 +46,9 @@ type User struct {
 	// LabID is the ID of the lab a [RoleTeacher] user is restricted to.  It is
 	// empty for administrators.
 	LabID string
+
+	// ID is the unique identifier for the web user.  It must not be empty.
+	ID UserID
 }
 
 // RoleTeacher is the role of a restricted user that can only use the lab
