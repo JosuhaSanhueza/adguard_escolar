@@ -1,14 +1,12 @@
-name: Auto Build Packages on Push
+name: Auto Build Packages (manual)
 
+# This used to run on every push to master, which opened a stale
+# "Auto-rebuild release packages" PR after each merge (built with the old
+# version.json, so merging it would have clobbered a proper release).  Releases
+# now go through publish-update.yml, which bumps version.json and rebuilds in a
+# single PR.  This workflow is kept only as a manual fallback.
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - 'AdGuardHome_linux_amd64.tar.gz'
-      - 'AdGuardHome_freebsd_amd64.tar.gz'
-      - 'README.md'
-      - '.github/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
