@@ -162,6 +162,7 @@ const dashboard = handleActions(
         [actions.getProfileSuccess.toString()]: (state, { payload }: any) => ({
             ...state,
             name: payload.name,
+            role: payload.role || '',
             theme: payload.theme,
             processingProfile: false,
         }),
@@ -190,6 +191,7 @@ const dashboard = handleActions(
         autoClients: [],
         supportedTags: [],
         name: '',
+        role: '',
         theme: undefined,
         checkUpdateFlag: false,
     },

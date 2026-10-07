@@ -1,7 +1,9 @@
 package home
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"slices"
@@ -16,9 +18,14 @@ const (
 	defaultGameListURL = "https://raw.githubusercontent.com/JosuhaSanhueza/BlockList/refs/heads/main/GamesBlockList.txt"
 	defaultStartIP     = "192.168.12.101"
 	defaultEndIP       = "192.168.12.145"
+	defaultLabID       = "lab1"
+	defaultLabName     = "Laboratorio 1"
+
+	// maxLabHosts is the maximum number of hosts a single lab range may cover.
+	maxLabHosts = 512
 )
 
-// GameControlHost represents an individual host state within the GameControl range.
+// GameControlHost represents an individual host state within a lab.
 type GameControlHost struct {
 	IP   string `json:"ip"`
 	Host string `json:"host"`
@@ -30,12 +37,27 @@ type GameControlHost struct {
 	InternetBlocked bool `json:"internet_blocked"`
 }
 
+// GameControlLab is a named group of machines defined by an IPv4 range.
+type GameControlLab struct {
+	ID         string `json:"id" yaml:"id"`
+	Name       string `json:"name" yaml:"name"`
+	RangeStart string `json:"range_start" yaml:"range_start"`
+	RangeEnd   string `json:"range_end" yaml:"range_end"`
+}
+
 // GameControlConfig represents the settings and current status for GameControl.
 type GameControlConfig struct {
-	Enabled      bool            `json:"enabled" yaml:"enabled"`
-	UpstreamURL  string          `json:"upstream_url" yaml:"upstream_url"`
-	RangeStart   string          `json:"range_start" yaml:"range_start"`
-	RangeEnd     string          `json:"range_end" yaml:"range_end"`
+	Enabled     bool   `json:"enabled" yaml:"enabled"`
+	UpstreamURL string `json:"upstream_url" yaml:"upstream_url"`
+
+	// Labs are the configured labs.
+	Labs []GameControlLab `json:"labs" yaml:"labs"`
+
+	// RangeStart and RangeEnd are the legacy single-lab range, migrated into
+	// Labs on load and left empty afterwards.
+	RangeStart string `json:"-" yaml:"range_start,omitempty"`
+	RangeEnd   string `json:"-" yaml:"range_end,omitempty"`
+
 	BlockedHosts map[string]bool `json:"blocked_hosts" yaml:"blocked_hosts"` // IP -> blocked state
 }
 
@@ -43,20 +65,58 @@ type gameControlManager struct {
 	mu     sync.RWMutex
 	conf   GameControlConfig
 	webReg aghhttp.Registrar
+
+	// persist saves the configuration to disk.  It must be called without mu
+	// held.  It may be nil, e.g. in tests.
+	persist func(ctx context.Context)
 }
 
 var gameControlgameControlMgr = &gameControlManager{
 	conf: GameControlConfig{
-		Enabled:      true,
-		UpstreamURL:  defaultGameListURL,
-		RangeStart:   defaultStartIP,
-		RangeEnd:     defaultEndIP,
+		Enabled:     true,
+		UpstreamURL: defaultGameListURL,
+		Labs: []GameControlLab{{
+			ID:         defaultLabID,
+			Name:       defaultLabName,
+			RangeStart: defaultStartIP,
+			RangeEnd:   defaultEndIP,
+		}},
 		BlockedHosts: make(map[string]bool),
 	},
 }
 
-func initGameControl(webReg aghhttp.Registrar) {
+// save persists the configuration if possible.  It must be called without
+// m.mu held.
+func (m *gameControlManager) save(ctx context.Context) {
+	if m.persist != nil {
+		m.persist(ctx)
+	}
+}
+
+// migrateLegacyRange converts the legacy single range into a lab.  It must be
+// called with m.mu held for writing.
+func (m *gameControlManager) migrateLegacyRange() {
+	if m.conf.RangeStart == "" && m.conf.RangeEnd == "" {
+		return
+	}
+
+	if len(m.conf.Labs) == 0 {
+		m.conf.Labs = []GameControlLab{{
+			ID:         defaultLabID,
+			Name:       defaultLabName,
+			RangeStart: m.conf.RangeStart,
+			RangeEnd:   m.conf.RangeEnd,
+		}}
+	}
+
+	m.conf.RangeStart = ""
+	m.conf.RangeEnd = ""
+}
+
+func (web *webAPI) initGameControl() {
+	webReg := web.httpReg
 	gameControlgameControlMgr.webReg = webReg
+	gameControlgameControlMgr.persist = web.confModifier.Apply
 
 	webReg.Register(http.MethodGet, "/control/gamecontrol/status", handleGameControlStatus)
 	webReg.Register(http.MethodPost, "/control/gamecontrol/update_host", handleGameControlUpdateHost)
@@ -72,14 +132,19 @@ func initGameControl(webReg aghhttp.Registrar) {
 		"/control/gamecontrol/internet/toggle_all",
 		handleGameControlInternetToggleAll,
 	)
+
+	web.registerLabHandlers()
 }
 
-type gameControlStatusResp struct {
-	Enabled     bool              `json:"enabled"`
-	UpstreamURL string            `json:"upstream_url"`
-	RangeStart  string            `json:"range_start"`
-	RangeEnd    string            `json:"range_end"`
-	Hosts       []GameControlHost `json:"hosts"`
+// labScope returns the lab ID the request's user is restricted to.  restricted
+// is false for administrators.
+func labScope(ctx context.Context) (labID string, restricted bool) {
+	u, ok := webUserFromContext(ctx)
+	if !ok || !u.IsTeacher() {
+		return "", false
+	}
+
+	return u.LabID, true
 }
 
 func parseIP4(ipStr string) (uint32, bool) {
@@ -100,23 +165,17 @@ func formatIP4(val uint32) string {
 	}).String()
 }
 
-func (m *gameControlManager) getHosts() []GameControlHost {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	startVal, ok1 := parseIP4(m.conf.RangeStart)
-	endVal, ok2 := parseIP4(m.conf.RangeEnd)
-
-	if !ok1 || !ok2 || startVal > endVal {
-		startVal, _ = parseIP4(defaultStartIP)
-		endVal, _ = parseIP4(defaultEndIP)
+// labHosts returns the hosts of lab.  It must be called with m.mu held.
+func (m *gameControlManager) labHosts(lab GameControlLab) []GameControlHost {
+	startVal, ok1 := parseIP4(lab.RangeStart)
+	endVal, ok2 := parseIP4(lab.RangeEnd)
+	if !ok1 || !ok2 || startVal > endVal || endVal-startVal >= maxLabHosts {
+		return nil
 	}
 
 	hosts := make([]GameControlHost, 0, endVal-startVal+1)
 	for i := startVal; i <= endVal; i++ {
 		ip := formatIP4(i)
-		pcNum := i - startVal + 1
-		hostName := "PC" + strconv.Itoa(int(pcNum))
 
 		blocked, exists := m.conf.BlockedHosts[ip]
 		if !exists {
@@ -125,32 +184,117 @@ func (m *gameControlManager) getHosts() []GameControlHost {
 
 		hosts = append(hosts, GameControlHost{
 			IP:      ip,
-			Host:    hostName,
+			Host:    "PC" + strconv.Itoa(int(i-startVal+1)),
 			Blocked: blocked,
 		})
 	}
+
 	return hosts
 }
 
-func handleGameControlStatus(w http.ResponseWriter, r *http.Request) {
-	gameControlgameControlMgr.mu.RLock()
-	resp := gameControlStatusResp{
-		Enabled:     gameControlgameControlMgr.conf.Enabled,
-		UpstreamURL: gameControlgameControlMgr.conf.UpstreamURL,
-		RangeStart:  gameControlgameControlMgr.conf.RangeStart,
-		RangeEnd:    gameControlgameControlMgr.conf.RangeEnd,
-		Hosts:       gameControlgameControlMgr.getHosts(),
+// scopedLabs returns a copy of the labs the request may see: all for
+// administrators, only the assigned one for teachers.  It must be called with
+// m.mu held.
+func (m *gameControlManager) scopedLabs(ctx context.Context) (labs []GameControlLab) {
+	labID, restricted := labScope(ctx)
+	if !restricted {
+		return slices.Clone(m.conf.Labs)
 	}
-	gameControlgameControlMgr.mu.RUnlock()
 
-	if dnsServer := globalContext.dnsServer; dnsServer != nil {
-		disallowed := dnsServer.DisallowedClients()
-		for i, h := range resp.Hosts {
-			resp.Hosts[i].InternetBlocked = slices.Contains(disallowed, h.IP)
+	for _, l := range m.conf.Labs {
+		if l.ID == labID {
+			return []GameControlLab{l}
 		}
 	}
 
-	aghhttp.WriteJSONResponseOK(r.Context(), nil, w, r, resp)
+	return nil
+}
+
+// scopedLabsByID is like scopedLabs, but narrows the result to labID if it is
+// not empty.  ok is false if labID was given and is not visible to the user.
+func (m *gameControlManager) scopedLabsByID(
+	ctx context.Context,
+	labID string,
+) (labs []GameControlLab, ok bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	labs = m.scopedLabs(ctx)
+	if labID == "" {
+		return labs, true
+	}
+
+	labs = slices.DeleteFunc(labs, func(l GameControlLab) bool { return l.ID != labID })
+
+	return labs, len(labs) > 0
+}
+
+// hostsOf returns the hosts of all of the given labs.
+func (m *gameControlManager) hostsOf(labs []GameControlLab) (hosts []GameControlHost) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, l := range labs {
+		hosts = append(hosts, m.labHosts(l)...)
+	}
+
+	return hosts
+}
+
+// ipAllowed returns true if the request's user may control the given IP: it
+// must belong to a lab visible to the user.
+func (m *gameControlManager) ipAllowed(ctx context.Context, ip string) (ok bool) {
+	labs, _ := m.scopedLabsByID(ctx, "")
+	for _, h := range m.hostsOf(labs) {
+		if h.IP == ip {
+			return true
+		}
+	}
+
+	return false
+}
+
+type gameControlLabResp struct {
+	GameControlLab
+	Hosts []GameControlHost `json:"hosts"`
+}
+
+type gameControlStatusResp struct {
+	Enabled     bool                 `json:"enabled"`
+	UpstreamURL string               `json:"upstream_url"`
+	Restricted  bool                 `json:"restricted"`
+	Labs        []gameControlLabResp `json:"labs"`
+}
+
+func handleGameControlStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	m := gameControlgameControlMgr
+
+	labs, _ := m.scopedLabsByID(ctx, "")
+	_, restricted := labScope(ctx)
+
+	m.mu.RLock()
+	resp := gameControlStatusResp{
+		Enabled:     m.conf.Enabled,
+		UpstreamURL: m.conf.UpstreamURL,
+		Restricted:  restricted,
+		Labs:        make([]gameControlLabResp, 0, len(labs)),
+	}
+	for _, l := range labs {
+		resp.Labs = append(resp.Labs, gameControlLabResp{GameControlLab: l, Hosts: m.labHosts(l)})
+	}
+	m.mu.RUnlock()
+
+	if dnsServer := globalContext.dnsServer; dnsServer != nil {
+		disallowed := dnsServer.DisallowedClients()
+		for _, l := range resp.Labs {
+			for i, h := range l.Hosts {
+				l.Hosts[i].InternetBlocked = slices.Contains(disallowed, h.IP)
+			}
+		}
+	}
+
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, resp)
 }
 
 // internetToggleHostReq is the request body for
@@ -170,14 +314,20 @@ func handleGameControlInternetToggleHost(w http.ResponseWriter, r *http.Request)
 
 	req := &internetToggleHostReq{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusBadRequest, "invalid request: %s", err)
+
+		return
+	}
+
+	if !gameControlgameControlMgr.ipAllowed(ctx, req.IP) {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusForbidden, "host is not in your lab")
 
 		return
 	}
 
 	dnsServer := globalContext.dnsServer
 	if dnsServer == nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusServiceUnavailable, "dns server is not ready")
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusServiceUnavailable, "dns server is not ready")
 
 		return
 	}
@@ -192,60 +342,66 @@ func handleGameControlInternetToggleHost(w http.ResponseWriter, r *http.Request)
 		clients = slices.DeleteFunc(clients, func(c string) bool { return c == req.IP })
 	default:
 		// Already in the desired state; nothing to do.
-		aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+		aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 
 		return
 	}
 
 	if err := dnsServer.SetDisallowedClients(ctx, clients); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusInternalServerError, "%s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusInternalServerError, "%s", err)
 
 		return
 	}
 
-	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 }
 
 // internetToggleAllReq is the request body for
-// POST /control/gamecontrol/internet/toggle_all.
+// POST /control/gamecontrol/internet/toggle_all.  An empty LabID means every
+// lab the user can see.
 type internetToggleAllReq struct {
-	Blocked bool `json:"blocked"`
+	LabID   string `json:"lab_id"`
+	Blocked bool   `json:"blocked"`
 }
 
-// handleGameControlInternetToggleAll adds or removes every host currently
-// configured in the GameControl IP range from the DNS access settings'
-// disallowed-clients list in a single update, cutting off (or restoring) the
-// whole lab's internet access at once.
+// handleGameControlInternetToggleAll adds or removes every host of the
+// requested lab from the DNS access settings' disallowed-clients list in a
+// single update, cutting off (or restoring) the whole lab's internet access at
+// once.
 func handleGameControlInternetToggleAll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	req := &internetToggleAllReq{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusBadRequest, "invalid request: %s", err)
+
+		return
+	}
+
+	m := gameControlgameControlMgr
+	labs, ok := m.scopedLabsByID(ctx, req.LabID)
+	if !ok {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusForbidden, "lab not available")
 
 		return
 	}
 
 	dnsServer := globalContext.dnsServer
 	if dnsServer == nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusServiceUnavailable, "dns server is not ready")
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusServiceUnavailable, "dns server is not ready")
 
 		return
 	}
 
-	clients := withRangeDisallowed(
-		dnsServer.DisallowedClients(),
-		gameControlgameControlMgr.getHosts(),
-		req.Blocked,
-	)
+	clients := withRangeDisallowed(dnsServer.DisallowedClients(), m.hostsOf(labs), req.Blocked)
 
 	if err := dnsServer.SetDisallowedClients(ctx, clients); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusInternalServerError, "%s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusInternalServerError, "%s", err)
 
 		return
 	}
 
-	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 }
 
 // withRangeDisallowed returns clients with every host in rangeHosts added
@@ -278,77 +434,100 @@ func handleGameControlUpdateHost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req updateHostReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusBadRequest, "invalid request: %s", err)
 		return
 	}
 
-	gameControlgameControlMgr.mu.Lock()
-	if gameControlgameControlMgr.conf.BlockedHosts == nil {
-		gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
-	}
-	gameControlgameControlMgr.conf.BlockedHosts[req.IP] = req.Blocked
-	gameControlgameControlMgr.mu.Unlock()
+	m := gameControlgameControlMgr
+	if !m.ipAllowed(ctx, req.IP) {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusForbidden, "host is not in your lab")
 
-	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+		return
+	}
+
+	m.mu.Lock()
+	if m.conf.BlockedHosts == nil {
+		m.conf.BlockedHosts = make(map[string]bool)
+	}
+	m.conf.BlockedHosts[req.IP] = req.Blocked
+	m.mu.Unlock()
+
+	m.save(ctx)
+
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 }
 
 type toggleAllReq struct {
-	Blocked bool `json:"blocked"`
+	LabID   string `json:"lab_id"`
+	Blocked bool   `json:"blocked"`
 }
 
 func handleGameControlToggleAll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req toggleAllReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusBadRequest, "invalid request: %s", err)
 		return
 	}
 
-	hosts := gameControlgameControlMgr.getHosts()
+	m := gameControlgameControlMgr
+	labs, ok := m.scopedLabsByID(ctx, req.LabID)
+	if !ok {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusForbidden, "lab not available")
 
-	gameControlgameControlMgr.mu.Lock()
-	if gameControlgameControlMgr.conf.BlockedHosts == nil {
-		gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
+		return
+	}
+
+	hosts := m.hostsOf(labs)
+
+	m.mu.Lock()
+	if m.conf.BlockedHosts == nil {
+		m.conf.BlockedHosts = make(map[string]bool)
 	}
 	for _, h := range hosts {
-		gameControlgameControlMgr.conf.BlockedHosts[h.IP] = req.Blocked
+		m.conf.BlockedHosts[h.IP] = req.Blocked
 	}
-	gameControlgameControlMgr.mu.Unlock()
+	m.mu.Unlock()
 
-	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+	m.save(ctx)
+
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 }
 
 type updateConfigReq struct {
 	Enabled     *bool  `json:"enabled,omitempty"`
 	UpstreamURL string `json:"upstream_url,omitempty"`
-	RangeStart  string `json:"range_start,omitempty"`
-	RangeEnd    string `json:"range_end,omitempty"`
 }
 
+// handleGameControlUpdateConfig updates the global module settings.  It is
+// administrator-only.
 func handleGameControlUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var req updateConfigReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		aghhttp.ErrorAndLog(ctx, nil, r, w, http.StatusBadRequest, "invalid request: %s", err)
+	if _, restricted := labScope(ctx); restricted {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusForbidden, "administrators only")
+
 		return
 	}
 
-	gameControlgameControlMgr.mu.Lock()
+	var req updateConfigReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		aghhttp.ErrorAndLog(ctx, slog.Default(), r, w, http.StatusBadRequest, "invalid request: %s", err)
+		return
+	}
+
+	m := gameControlgameControlMgr
+	m.mu.Lock()
 	if req.Enabled != nil {
-		gameControlgameControlMgr.conf.Enabled = *req.Enabled
+		m.conf.Enabled = *req.Enabled
 	}
 	if strings.TrimSpace(req.UpstreamURL) != "" {
-		gameControlgameControlMgr.conf.UpstreamURL = strings.TrimSpace(req.UpstreamURL)
+		m.conf.UpstreamURL = strings.TrimSpace(req.UpstreamURL)
 	}
-	if strings.TrimSpace(req.RangeStart) != "" {
-		gameControlgameControlMgr.conf.RangeStart = strings.TrimSpace(req.RangeStart)
-	}
-	if strings.TrimSpace(req.RangeEnd) != "" {
-		gameControlgameControlMgr.conf.RangeEnd = strings.TrimSpace(req.RangeEnd)
-	}
-	gameControlgameControlMgr.mu.Unlock()
+	m.mu.Unlock()
 
-	aghhttp.WriteJSONResponseOK(ctx, nil, w, r, map[string]string{"result": "ok"})
+	m.save(ctx)
+
+	aghhttp.WriteJSONResponseOK(ctx, slog.Default(), w, r, map[string]string{"result": "ok"})
 }
 
 // IsIPGameAllowed checks if a given IP address is explicitly allowed (unblocked) in GameControl.

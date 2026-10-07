@@ -133,6 +133,7 @@ export type DashboardData = {
     autoClients: AutoClient[];
     supportedTags: string[];
     name: string;
+    role: string;
     theme: string | null;
     checkUpdateFlag: boolean;
     announcementUrl: string;
@@ -456,6 +457,7 @@ export const initialState: RootState = {
         autoClients: [],
         supportedTags: [],
         name: '',
+        role: '',
         theme: undefined,
         checkUpdateFlag: false,
         announcementUrl: '',

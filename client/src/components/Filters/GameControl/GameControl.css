@@ -41,3 +41,40 @@
 .gamecontrol-row-btn {
     min-width: 140px;
 }
+
+/* Teacher panel: a deliberately minimal, large-button layout. */
+.teacher-panel__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+}
+
+.teacher-panel__title {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.teacher-panel__group {
+    margin-bottom: 24px;
+}
+
+.teacher-panel__label {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.teacher-panel__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 12px;
+}
+
+.teacher-panel__buttons > * {
+    margin-right: 12px;
+}
+
+.teacher-panel__btn {
+    min-width: 240px;
+}

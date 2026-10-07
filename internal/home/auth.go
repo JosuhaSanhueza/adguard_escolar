@@ -32,6 +32,12 @@ type webUser struct {
 
 	// UserID is the unique identifier of the web user.
 	UserID aghuser.UserID `yaml:"-"`
+
+	// Role is the role of the web user.  Empty means a full administrator.
+	Role string `yaml:"role,omitempty"`
+
+	// LabID is the lab a teacher is restricted to.
+	LabID string `yaml:"lab,omitempty"`
 }
 
 // toUser returns the new properly initialized *aghuser.User using stored
@@ -46,6 +52,8 @@ func (wu *webUser) toUser() (u *aghuser.User) {
 		Password: aghuser.NewDefaultPassword(wu.PasswordHash),
 		Login:    aghuser.Login(wu.Name),
 		ID:       uid,
+		Role:     wu.Role,
+		LabID:    wu.LabID,
 	}
 }
 
@@ -194,6 +202,8 @@ func (a *auth) usersList(ctx context.Context) (webUsers []webUser) {
 			Name:         string(u.Login),
 			PasswordHash: string(u.Password.Hash()),
 			UserID:       u.ID,
+			Role:         u.Role,
+			LabID:        u.LabID,
 		})
 	}
 
@@ -232,4 +242,87 @@ func (a *auth) close(ctx context.Context) {
 	if err != nil {
 		a.logger.ErrorContext(ctx, "closing session storage", slogutil.KeyError, err)
 	}
+}
+
+// teachers returns all teacher users.
+func (a *auth) teachers(ctx context.Context) (teachers []*aghuser.User) {
+	users, _ := a.users.All(ctx)
+	for _, u := range users {
+		if u.IsTeacher() {
+			teachers = append(teachers, u)
+		}
+	}
+
+	return teachers
+}
+
+// userDeleter is implemented by user databases that support removal.
+type userDeleter interface {
+	Delete(ctx context.Context, login aghuser.Login) (ok bool)
+}
+
+// upsertTeacher creates the teacher login or updates its lab and, if password
+// is not empty, its password.  It never touches non-teacher users.
+func (a *auth) upsertTeacher(
+	ctx context.Context,
+	login aghuser.Login,
+	password string,
+	labID string,
+) (err error) {
+	del, ok := a.users.(userDeleter)
+	if !ok {
+		return errors.Error("user database doesn't support updates")
+	}
+
+	existing, err := a.users.ByLogin(ctx, login)
+	if err != nil {
+		return fmt.Errorf("looking up user: %w", err)
+	}
+
+	u := &aghuser.User{Login: login, Role: aghuser.RoleTeacher, LabID: labID}
+	switch {
+	case existing == nil:
+		if password == "" {
+			return errors.Error("la contraseña no puede estar vacía")
+		}
+	case !existing.IsTeacher():
+		return errors.Error("ese usuario existe y no es un docente")
+	default:
+		u.ID = existing.ID
+		u.Password = existing.Password
+	}
+
+	if password != "" {
+		var hash []byte
+		hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("generating hash: %w", err)
+		}
+
+		u.Password = aghuser.NewDefaultPassword(string(hash))
+	}
+
+	if u.ID == (aghuser.UserID{}) {
+		u.ID = aghuser.MustNewUserID()
+	}
+
+	del.Delete(ctx, login)
+
+	return a.users.Create(ctx, u)
+}
+
+// deleteTeacher removes the teacher login.  It returns false if there is no
+// such teacher; non-teacher users are never removed.
+func (a *auth) deleteTeacher(ctx context.Context, login aghuser.Login) (ok bool) {
+	del, ok := a.users.(userDeleter)
+	if !ok {
+		return false
+	}
+
+	u, _ := a.users.ByLogin(ctx, login)
+	if !u.IsTeacher() {
+		return false
+	}
+
+	return del.Delete(ctx, login)
 }

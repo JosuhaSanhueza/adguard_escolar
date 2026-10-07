@@ -715,6 +715,8 @@ func loadGameControlConfig() {
 	if gameControlgameControlMgr.conf.BlockedHosts == nil {
 		gameControlgameControlMgr.conf.BlockedHosts = make(map[string]bool)
 	}
+
+	gameControlgameControlMgr.migrateLegacyRange()
 }
 
 // logIPHint logs an informational message when the config contains an unquoted

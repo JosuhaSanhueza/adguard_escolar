@@ -39,6 +39,23 @@ type User struct {
 	// Login is the login name of the web user.  It must not be empty.
 	Login Login
 
+	// Role is the role of the web user.  Empty means a full administrator;
+	// see [RoleTeacher].
+	Role string
+
+	// LabID is the ID of the lab a [RoleTeacher] user is restricted to.  It is
+	// empty for administrators.
+	LabID string
+
 	// ID is the unique identifier for the web user.  It must not be empty.
 	ID UserID
+}
+
+// RoleTeacher is the role of a restricted user that can only use the lab
+// controls of the single lab assigned to them.
+const RoleTeacher = "teacher"
+
+// IsTeacher returns true if u is a restricted teacher user.
+func (u *User) IsTeacher() (ok bool) {
+	return u != nil && u.Role == RoleTeacher
 }
