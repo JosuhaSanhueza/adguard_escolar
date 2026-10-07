@@ -279,9 +279,13 @@ export const getProfile = () => async (dispatch: any) => {
     try {
         const profile = await apiClient.getProfile();
         dispatch(getProfileSuccess(profile));
+
+        return profile;
     } catch (error) {
         dispatch(addErrorToast({ error }));
         dispatch(getProfileFailure());
+
+        return undefined;
     }
 };
 
@@ -300,7 +304,7 @@ export const getDnsStatus = () => async (dispatch: any) => {
         window.location.reload();
     };
 
-    const handleRequestSuccess = (response: any) => {
+    const handleRequestSuccess = async (response: any) => {
         const dnsStatus = response.data;
         if (dnsStatus.protection_disabled_duration === 0) {
             dnsStatus.protection_disabled_duration = null;
@@ -309,9 +313,13 @@ export const getDnsStatus = () => async (dispatch: any) => {
         const runningStatus = dnsStatus && running;
         if (runningStatus === true) {
             dispatch(dnsStatusSuccess(dnsStatus));
-            dispatch(getVersion());
-            dispatch(getTlsStatus());
-            dispatch(getProfile());
+            // Teachers may only use the lab controls, so don't request the
+            // admin-only data for them.
+            const profile = await dispatch(getProfile());
+            if (profile?.role !== 'teacher') {
+                dispatch(getVersion());
+                dispatch(getTlsStatus());
+            }
         } else {
             dispatch(setDnsRunningStatus(running));
         }

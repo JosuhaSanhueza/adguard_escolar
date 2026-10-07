@@ -147,3 +147,21 @@ func (db *DefaultDB) Create(ctx context.Context, u *User) (err error) {
 
 	return nil
 }
+
+// Delete removes the user with the given login from the database.  It is not a
+// part of the [DB] interface to keep the existing implementations intact.  It
+// returns false if there was no such user.
+func (db *DefaultDB) Delete(ctx context.Context, login Login) (ok bool) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	id, ok := db.loginToUserID[login]
+	if !ok {
+		return false
+	}
+
+	delete(db.loginToUserID, login)
+	delete(db.userIDToUser, id)
+
+	return true
+}

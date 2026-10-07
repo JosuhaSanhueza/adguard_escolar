@@ -1,286 +1,183 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PageTitle from '../../ui/PageTitle';
 import Card from '../../ui/Card';
+import LabsAdmin from './LabsAdmin';
 import './GameControl.css';
-
-interface GameHost {
-    ip: string;
-    host: string;
-    blocked: boolean;
-    internet_blocked: boolean;
-}
-
-interface GameControlStatus {
-    enabled: boolean;
-    upstream_url: string;
-    range_start: string;
-    range_end: string;
-    hosts: GameHost[];
-}
+import { fetchGameControlStatus, gameControlPost, GameControlStatus, GameHost, GameLab } from './gamecontrolApi';
 
 const GameControl: React.FC = () => {
     const [status, setStatus] = useState<GameControlStatus | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [search, setSearch] = useState<string>('');
+    const [error, setError] = useState<string>('');
 
-    const fetchStatus = async () => {
-        try {
-            setLoading(true);
-            const res = await fetch('/control/gamecontrol/status');
-            if (res.ok) {
-                const data = await res.json();
-                setStatus(data);
-            }
-        } catch (err) {
-            console.error('Error fetching GameControl status:', err);
-        } finally {
-            setLoading(false);
+    const refresh = useCallback(async () => {
+        const data = await fetchGameControlStatus();
+        if (data) {
+            setStatus(data);
         }
-    };
-
-    useEffect(() => {
-        fetchStatus();
+        setLoading(false);
     }, []);
 
-    const handleToggleHost = async (ip: string, currentBlocked: boolean) => {
-        try {
-            const res = await fetch('/control/gamecontrol/update_host', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip, blocked: !currentBlocked }),
-            });
-            if (res.ok) {
-                fetchStatus();
-            }
-        } catch (err) {
-            console.error('Error updating host:', err);
-        }
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    const act = async (path: string, body: object) => {
+        const res = await gameControlPost(path, body);
+        setError(res.ok ? '' : res.error || 'Error');
+        refresh();
     };
 
-    const handleToggleAll = async (blocked: boolean) => {
-        try {
-            const res = await fetch('/control/gamecontrol/toggle_all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ blocked }),
-            });
-            if (res.ok) {
-                fetchStatus();
-            }
-        } catch (err) {
-            console.error('Error toggling all hosts:', err);
-        }
-    };
+    const matches = (h: GameHost) =>
+        h.host.toLowerCase().includes(search.toLowerCase()) || h.ip.includes(search);
 
-    const handleToggleInternetHost = async (ip: string, currentBlocked: boolean) => {
-        try {
-            const res = await fetch('/control/gamecontrol/internet/toggle_host', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip, blocked: !currentBlocked }),
-            });
-            if (res.ok) {
-                fetchStatus();
-            }
-        } catch (err) {
-            console.error('Error toggling internet access for host:', err);
-        }
-    };
+    const renderLab = (lab: GameLab) => {
+        const hosts = lab.hosts.filter(matches);
 
-    const handleToggleInternetAll = async (blocked: boolean) => {
-        try {
-            const res = await fetch('/control/gamecontrol/internet/toggle_all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ blocked }),
-            });
-            if (res.ok) {
-                fetchStatus();
-            }
-        } catch (err) {
-            console.error('Error toggling internet access for all hosts:', err);
-        }
-    };
+        return (
+            <Card key={lab.id} title={`${lab.name} (${lab.range_start} - ${lab.range_end})`}>
+                <div className="p-3">
+                    <div className="mb-4">
+                        <div className="gamecontrol-bulk-row mb-2">
+                            <span className="font-weight-bold" style={{ minWidth: 70 }}>
+                                Juegos:
+                            </span>
+                            <button
+                                className="btn btn-danger btn-sm gamecontrol-bulk-btn"
+                                onClick={() => act('toggle_all', { lab_id: lab.id, blocked: true })}>
+                                Bloquear Juegos
+                            </button>
+                            <button
+                                className="btn btn-success btn-sm gamecontrol-bulk-btn"
+                                onClick={() => act('toggle_all', { lab_id: lab.id, blocked: false })}>
+                                Desbloquear Juegos
+                            </button>
+                        </div>
+                        <div className="gamecontrol-bulk-row">
+                            <span className="font-weight-bold" style={{ minWidth: 70 }}>
+                                Internet:
+                            </span>
+                            <button
+                                className="btn btn-danger btn-sm gamecontrol-bulk-btn"
+                                onClick={() => act('internet/toggle_all', { lab_id: lab.id, blocked: true })}>
+                                Cortar Internet
+                            </button>
+                            <button
+                                className="btn btn-success btn-sm gamecontrol-bulk-btn"
+                                onClick={() => act('internet/toggle_all', { lab_id: lab.id, blocked: false })}>
+                                Restaurar Internet
+                            </button>
+                        </div>
+                    </div>
 
-    const filteredHosts = status?.hosts.filter(
-        (h) =>
-            h.host.toLowerCase().includes(search.toLowerCase()) ||
-            h.ip.includes(search),
-    ) || [];
+                    <div className="table-responsive">
+                        <table className="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Equipo / Host</th>
+                                    <th>Dirección IP</th>
+                                    <th>Estado de Acceso a Juegos</th>
+                                    <th>Acceso a Internet</th>
+                                    <th className="text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {hosts.map((h) => (
+                                    <tr key={h.ip}>
+                                        <td className="font-weight-bold">{h.host}</td>
+                                        <td>{h.ip}</td>
+                                        <td>
+                                            <span className={`badge ${h.blocked ? 'badge-danger' : 'badge-success'}`}>
+                                                {h.blocked ? 'Bloqueado' : 'Permitido'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span
+                                                className={`badge ${
+                                                    h.internet_blocked ? 'badge-danger' : 'badge-success'
+                                                }`}>
+                                                {h.internet_blocked ? 'Cortado' : 'Con acceso'}
+                                            </span>
+                                        </td>
+                                        <td className="text-right">
+                                            <div className="gamecontrol-row-actions">
+                                                <button
+                                                    className={`btn btn-sm gamecontrol-row-btn ${
+                                                        h.blocked ? 'btn-success' : 'btn-danger'
+                                                    }`}
+                                                    onClick={() => act('update_host', { ip: h.ip, blocked: !h.blocked })}>
+                                                    {h.blocked ? 'Permitir Acceso' : 'Bloquear Acceso'}
+                                                </button>
+                                                <button
+                                                    className={`btn btn-sm gamecontrol-row-btn ${
+                                                        h.internet_blocked ? 'btn-success' : 'btn-danger'
+                                                    }`}
+                                                    onClick={() =>
+                                                        act('internet/toggle_host', {
+                                                            ip: h.ip,
+                                                            blocked: !h.internet_blocked,
+                                                        })
+                                                    }>
+                                                    {h.internet_blocked ? 'Restaurar Internet' : 'Cortar Internet'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {hosts.length === 0 && (
+                                    <tr>
+                                        <td colSpan={5} className="text-center text-muted">
+                                            No se encontraron equipos.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </Card>
+        );
+    };
 
     return (
         <div>
-            <PageTitle title="GameControl - Control de Juegos por IP" />
-            <Card title="Panel de Administración de Juegos">
-                {loading && <div>Cargando GameControl...</div>}
-                {!loading && status && (
-                    <div className="p-3">
-                        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                            <div>
-                                <span className="font-weight-bold mr-2">Estado del Módulo:</span>
-                                <span className={`badge ${status.enabled ? 'badge-success' : 'badge-secondary'}`}>
-                                    {status.enabled ? 'Activo' : 'Inactivo'}
-                                </span>
-                            </div>
-                            <div>
-                                <div className="gamecontrol-bulk-row mb-2">
-                                    <span className="font-weight-bold text-muted">Juegos:</span>
-                                    <button
-                                        className="btn btn-danger gamecontrol-bulk-btn"
-                                        onClick={() => handleToggleAll(true)}>
-                                        Bloquear Todo el Laboratorio
-                                    </button>
-                                    <button
-                                        className="btn btn-success gamecontrol-bulk-btn"
-                                        onClick={() => handleToggleAll(false)}>
-                                        Desbloquear Todo el Laboratorio
-                                    </button>
-                                </div>
-                                <div className="gamecontrol-bulk-row">
-                                    <span className="font-weight-bold text-muted">Internet:</span>
-                                    <button
-                                        className="btn btn-danger gamecontrol-bulk-btn"
-                                        onClick={() => handleToggleInternetAll(true)}>
-                                        Cortar Todo el Laboratorio
-                                    </button>
-                                    <button
-                                        className="btn btn-success gamecontrol-bulk-btn"
-                                        onClick={() => handleToggleInternetAll(false)}>
-                                        Restaurar Todo el Laboratorio
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+            <PageTitle title="GameControl - Control de Juegos e Internet por Laboratorio" />
 
-                        <div className="card mb-4">
-                            <div className="card-body">
-                                <h6 className="font-weight-bold mb-3">Configuración Modular de Rango de IPs / Equipos</h6>
-                                <div className="form-row align-items-center">
-                                    <div className="col-auto mb-2">
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text font-weight-bold">
-                                                    IP Inicio:
-                                                </span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                id="rangeStart"
-                                                value={status.range_start}
-                                                onChange={(e) => setStatus({ ...status, range_start: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="col-auto mb-2">
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text font-weight-bold">
-                                                    IP Fin:
-                                                </span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                id="rangeEnd"
-                                                value={status.range_end}
-                                                onChange={(e) => setStatus({ ...status, range_end: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="col-auto mb-2">
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={async () => {
-                                                await fetch('/control/gamecontrol/config', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                        range_start: status.range_start,
-                                                        range_end: status.range_end,
-                                                    }),
-                                                });
-                                                fetchStatus();
-                                            }}>
-                                            Guardar Rango
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            {loading && <div>Cargando GameControl...</div>}
 
-                        <div className="mb-3">
-                            <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Buscar por Nombre de Equipo (PC1, PC2...) o IP..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="table-responsive">
-                            <table className="table table-vcenter card-table">
-                                <thead>
-                                    <tr>
-                                        <th>Equipo / Host</th>
-                                        <th>Dirección IP</th>
-                                        <th>Estado de Acceso a Juegos</th>
-                                        <th>Acceso a Internet</th>
-                                        <th className="text-right">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredHosts.map((h) => (
-                                        <tr key={h.ip}>
-                                            <td className="font-weight-bold">{h.host}</td>
-                                            <td>{h.ip}</td>
-                                            <td>
-                                                <span className={`badge ${h.blocked ? 'badge-danger' : 'badge-success'}`}>
-                                                    {h.blocked ? 'Bloqueado' : 'Permitido'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span
-                                                    className={`badge ${h.internet_blocked ? 'badge-danger' : 'badge-success'}`}>
-                                                    {h.internet_blocked ? 'Cortado' : 'Con acceso'}
-                                                </span>
-                                            </td>
-                                            <td className="text-right">
-                                                <div className="gamecontrol-row-actions">
-                                                    <button
-                                                        className={`btn btn-sm gamecontrol-row-btn ${
-                                                            h.blocked ? 'btn-success' : 'btn-danger'
-                                                        }`}
-                                                        onClick={() => handleToggleHost(h.ip, h.blocked)}>
-                                                        {h.blocked ? 'Permitir Acceso' : 'Bloquear Acceso'}
-                                                    </button>
-                                                    <button
-                                                        className={`btn btn-sm gamecontrol-row-btn ${
-                                                            h.internet_blocked ? 'btn-success' : 'btn-danger'
-                                                        }`}
-                                                        onClick={() =>
-                                                            handleToggleInternetHost(h.ip, h.internet_blocked)
-                                                        }>
-                                                        {h.internet_blocked ? 'Restaurar Internet' : 'Cortar Internet'}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {filteredHosts.length === 0 && (
-                                        <tr>
-                                            <td colSpan={5} className="text-center text-muted">
-                                                No se encontraron equipos en el rango.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+            {!loading && status && (
+                <>
+                    <div className="mb-3">
+                        <span className="font-weight-bold mr-2">Estado del Módulo:</span>
+                        <span className={`badge ${status.enabled ? 'badge-success' : 'badge-secondary'}`}>
+                            {status.enabled ? 'Activo' : 'Inactivo'}
+                        </span>
                     </div>
-                )}
-            </Card>
+
+                    {error && <div className="alert alert-danger">{error}</div>}
+
+                    <div className="mb-3">
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Buscar por Nombre de Equipo (PC1, PC2...) o IP..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    {status.labs.map(renderLab)}
+
+                    {status.labs.length === 0 && (
+                        <div className="alert alert-info">
+                            Todavía no hay laboratorios. Agrega uno en la sección &quot;Laboratorios&quot; de abajo.
+                        </div>
+                    )}
+
+                    <LabsAdmin labs={status.labs} onChanged={refresh} />
+                </>
+            )}
         </div>
     );
 };

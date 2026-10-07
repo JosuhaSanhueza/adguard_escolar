@@ -43,6 +43,7 @@ import CustomRules from '../../containers/CustomRules';
 
 import Services from '../Filters/Services';
 import GameControl from '../Filters/GameControl/GameControl';
+import TeacherPanel from '../Filters/GameControl/TeacherPanel';
 
 import Logs from '../Logs';
 import ProtectionTimer from '../ProtectionTimer';
@@ -110,7 +111,7 @@ const ROUTES = [
 
 const App = () => {
     const dispatch = useDispatch();
-    const { language, isCoreRunning, isUpdateAvailable, processing, theme } = useSelector<
+    const { language, isCoreRunning, isUpdateAvailable, processing, processingProfile, theme, role } = useSelector<
         RootState,
         RootState['dashboard']
     >((state) => state.dashboard, shallowEqual);
@@ -189,6 +190,17 @@ const App = () => {
         window.location.reload();
     };
 
+    if (role === 'teacher') {
+        // Teachers only get the minimal lab control panel.
+        return (
+            <>
+                <TeacherPanel />
+
+                <Toasts />
+            </>
+        );
+    }
+
     return (
         <HashRouter hashType="noslash">
             {updateAvailable && (
@@ -208,7 +220,7 @@ const App = () => {
             <ProtectionTimer />
 
             <div className="container container--wrap pb-5 pt-5">
-                {processing && <Loading />}
+                {(processing || processingProfile) && <Loading />}
 
                 {!isCoreRunning && (
                     <div className="row row-cards">
@@ -220,6 +232,7 @@ const App = () => {
                     </div>
                 )}
                 {!processing &&
+                    !processingProfile &&
                     isCoreRunning &&
                     ROUTES.map((route, index) => (
                         <Route key={index} exact={route.exact} path={route.path} component={route.component} />

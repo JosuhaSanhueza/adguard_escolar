@@ -42,13 +42,16 @@ type profileJSON struct {
 	Name     string `json:"name"`
 	Language string `json:"language"`
 	Theme    Theme  `json:"theme"`
+
+	// Role is "teacher" for restricted users and empty for administrators.
+	Role string `json:"role,omitempty"`
 }
 
 // handleGetProfile is the handler for GET /control/profile endpoint.
 func (web *webAPI) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var name string
+	var name, role string
 
 	if !web.auth.isGLiNet && !web.auth.isUserless {
 		u, ok := webUserFromContext(ctx)
@@ -59,6 +62,7 @@ func (web *webAPI) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		name = string(u.Login)
+		role = u.Role
 	}
 
 	var resp profileJSON
@@ -70,6 +74,7 @@ func (web *webAPI) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 			Name:     name,
 			Language: config.Language,
 			Theme:    config.Theme,
+			Role:     role,
 		}
 	}()
 
