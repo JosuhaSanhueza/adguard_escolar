@@ -51,8 +51,31 @@
     border-bottom: 1px solid rgba(0, 40, 100, 0.12);
 }
 
+.teacher-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.teacher-panel__content {
+    flex: 1 0 auto;
+}
+
+.teacher-panel__brand {
+    display: flex;
+    align-items: center;
+}
+
+.teacher-panel__logo {
+    height: 32px;
+    margin-right: 0;
+}
+
 .teacher-panel__title {
-    font-size: 1.2rem;
+    margin-left: 16px;
+    padding-left: 16px;
+    border-left: 1px solid var(--border-color);
+    font-size: 1.1rem;
     font-weight: 600;
 }
 

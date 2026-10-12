@@ -6,6 +6,48 @@ import Card from '../../ui/Card';
 import apiClient from '../../../api/Api';
 import { addErrorToast, addSuccessToast } from '../../../actions/toasts';
 
+const RESTART_POLL_MS = 2000;
+const RESTART_TIMEOUT_MS = 120000;
+
+const sleep = (ms: number) =>
+    new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+
+/**
+ * pollUntilUp resolves once the server answers again, or rejects once deadline
+ * (a Date.now() value) has passed.
+ */
+const pollUntilUp = async (deadline: number): Promise<void> => {
+    try {
+        const res = await fetch('control/status', { cache: 'no-store' });
+        if (res.ok) {
+            return;
+        }
+    } catch {
+        // Still restarting.
+    }
+
+    if (Date.now() > deadline) {
+        throw new Error('timeout');
+    }
+
+    await sleep(RESTART_POLL_MS);
+
+    await pollUntilUp(deadline);
+};
+
+/**
+ * waitForRestart resolves once the server answers again after restarting, or
+ * rejects after RESTART_TIMEOUT_MS.
+ */
+const waitForRestart = async () => {
+    // Give the server time to go down before polling.
+    await sleep(RESTART_POLL_MS * 2);
+
+    await pollUntilUp(Date.now() + RESTART_TIMEOUT_MS);
+};
+
 /**
  * ConfigProfile lets an admin export the portable subset of this
  * installation's configuration (DNS behavior, blocklists, blocked services,
@@ -20,6 +62,7 @@ export const ConfigProfile = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importing, setImporting] = useState(false);
+    const [restarting, setRestarting] = useState(false);
 
     const handleImportClick = () => {
         fileInputRef.current?.click();
@@ -42,11 +85,23 @@ export const ConfigProfile = () => {
         try {
             const profileText = await file.text();
             await apiClient.importConfigProfile(profileText);
-            dispatch(addSuccessToast(t('config_profile_import_success')));
         } catch (error) {
             dispatch(addErrorToast({ error }));
-        } finally {
             setImporting(false);
+
+            return;
+        }
+
+        dispatch(addSuccessToast(t('config_profile_import_success')));
+        setRestarting(true);
+
+        try {
+            await waitForRestart();
+            window.location.reload();
+        } catch {
+            setRestarting(false);
+            setImporting(false);
+            dispatch(addErrorToast({ error: t('config_profile_restart_timeout') }));
         }
     };
 
@@ -56,7 +111,7 @@ export const ConfigProfile = () => {
                 <a
                     href={apiClient.getConfigProfileExportUrl()}
                     className="btn btn-outline-primary btn-standard mr-2"
-                    download="adguard-escolar-profile.yaml">
+                    download="escolarapp-shield-perfil.yaml">
                     {t('config_profile_export')}
                 </a>
 
@@ -78,7 +133,11 @@ export const ConfigProfile = () => {
                 />
             </div>
 
-            <div className="text-muted mt-2">{t('config_profile_import_hint')}</div>
+            {restarting ? (
+                <div className="alert alert-info mt-2 mb-0">{t('config_profile_restarting')}</div>
+            ) : (
+                <div className="text-muted mt-2">{t('config_profile_import_hint')}</div>
+            )}
         </Card>
     );
 };
