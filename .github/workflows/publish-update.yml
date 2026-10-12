@@ -117,12 +117,32 @@ jobs:
           cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
           rm -rf tmp_pkg
 
+      # The private key only lives in this repository secret (and the
+      # maintainer's offline backup), never on the update server, so a
+      # compromised server can't get its own binaries installed: the updater
+      # in every installed instance rejects packages without a valid
+      # signature.
+      - name: Sign release packages
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::The UPDATE_SIGNING_KEY repository secret is not set."
+            exit 1
+          fi
+
+          go run ./scripts/update-signing sign \
+            AdGuardHome_linux_amd64.tar.gz \
+            AdGuardHome_freebsd_amd64.tar.gz
+
       - name: Commit version bump and rebuilt tarballs together
         id: commit
         env:
           NEW_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          git add version.json AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
+          git add version.json \
+            AdGuardHome_linux_amd64.tar.gz AdGuardHome_linux_amd64.tar.gz.sig \
+            AdGuardHome_freebsd_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz.sig
 
           if git diff --cached --quiet; then
             echo "Nothing changed, skipping."
@@ -153,5 +173,5 @@ jobs:
             --base master \
             --head "${{ steps.commit.outputs.branch }}" \
             --title "release: Publish ${NEW_VERSION}" \
-            --body "Bumps version.json to ${NEW_VERSION} and rebuilds both release tarballs with that version baked in, as a single change. Review and merge manually." \
+            --body "Bumps version.json to ${NEW_VERSION} and rebuilds and signs both release tarballs with that version baked in, as a single change. Review and merge manually." \
             || echo "PR may already exist for this branch."

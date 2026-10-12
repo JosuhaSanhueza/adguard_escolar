@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"io"
 	"io/fs"
@@ -42,6 +43,9 @@ type Updater struct {
 	goos    string
 	goarm   string
 	gomips  string
+
+	// signingKey is the key update packages must be signed with.
+	signingKey ed25519.PublicKey
 
 	workDir         string
 	confName        string
@@ -127,13 +131,23 @@ type Config struct {
 
 	// ExecPath is path to the executable file.  It must not be empty.
 	ExecPath string
+
+	// SigningKey is the key update packages must be signed with.  If nil,
+	// [DefaultSigningKey] is used.
+	SigningKey ed25519.PublicKey
 }
 
 // NewUpdater creates a new Updater.  conf must not be nil.
 func NewUpdater(conf *Config) *Updater {
+	signingKey := conf.SigningKey
+	if signingKey == nil {
+		signingKey = DefaultSigningKey()
+	}
+
 	return &Updater{
-		client: conf.Client,
-		logger: conf.Logger,
+		client:     conf.Client,
+		logger:     conf.Logger,
+		signingKey: signingKey,
 
 		cmdCons: conf.CommandConstructor,
 
@@ -174,6 +188,11 @@ func (u *Updater) Update(ctx context.Context, firstRun bool) (err error) {
 	err = u.downloadPackageFile(ctx)
 	if err != nil {
 		return fmt.Errorf("downloading package file: %w", err)
+	}
+
+	err = u.verifyPackageFile(ctx)
+	if err != nil {
+		return fmt.Errorf("checking package signature: %w", err)
 	}
 
 	err = u.unpack(ctx)
@@ -404,6 +423,10 @@ func (u *Updater) downloadPackageFile(ctx context.Context) (err error) {
 		return fmt.Errorf("requesting package: %w", err)
 	}
 	defer func() { err = errors.WithDeferred(err, resp.Body.Close()) }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("requesting package: status %d", resp.StatusCode)
+	}
 
 	r := ioutil.LimitReader(resp.Body, MaxPackageFileSize)
 
