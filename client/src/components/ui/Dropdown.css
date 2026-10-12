@@ -4,7 +4,8 @@
 
 .dropdown-item.active,
 .dropdown-item:active {
-    background-color: var(--btn-success-bgcolor);
+    color: #fff;
+    background-color: var(--brand);
 }
 
 .dropdown-menu {

@@ -74,8 +74,8 @@
 }
 
 .schedule__button-day[data-active='true'] {
-    color: var(--btn-success-bgcolor);
-    border-color: var(--btn-success-bgcolor);
+    color: var(--green-74);
+    border-color: var(--green-74);
 }
 
 .schedule__time-wrap {

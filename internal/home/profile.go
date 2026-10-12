@@ -13,17 +13,18 @@ import (
 // profileHeader is written at the top of every exported profile file, so that
 // anyone opening it understands what it is and isn't.
 const profileHeader = "" +
-	"# AdGuard Home configuration profile.\n" +
+	"# Perfil de configuración de EscolarApp Shield.\n" +
 	"#\n" +
-	"# This file contains only the settings that are safe to copy between\n" +
-	"# installations (DNS behavior, blocklists, blocked services, safe\n" +
-	"# search, cache, query log and statistics retention). It does NOT\n" +
-	"# contain the web UI address, admin users/passwords, TLS certificates,\n" +
-	"# DHCP, or persistent clients: those must always be set up by hand for\n" +
-	"# each installation.\n" +
+	"# Contiene solo los ajustes que se pueden copiar entre instalaciones:\n" +
+	"# DNS, listas de bloqueo y de permitidos, reglas personalizadas,\n" +
+	"# servicios bloqueados, búsqueda segura, caché, retención de registros\n" +
+	"# y estadísticas, y GameControl (laboratorios). NO contiene la dirección\n" +
+	"# del panel, usuarios ni contraseñas, certificados TLS, DHCP ni equipos\n" +
+	"# registrados: eso se configura a mano en cada instalación.\n" +
 	"#\n" +
-	"# Usage: finish the setup wizard on the target installation first, then\n" +
-	"# run: AdGuardHome --import-profile=<this file> and restart the service.\n\n"
+	"# Uso: termina el asistente de instalación en el equipo de destino y luego\n" +
+	"# importa este archivo desde Configuración general > Perfil de\n" +
+	"# configuración. El servicio se reinicia solo para aplicarlo.\n\n"
 
 // profileTopLevelKeys lists the top-level YAML keys of AdGuardHome.yaml that
 // are safe to export/import as part of a configuration profile. Anything not

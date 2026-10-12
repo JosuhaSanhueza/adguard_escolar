@@ -92,7 +92,7 @@
 
 .footer__theme-icon--active,
 [data-theme='dark'] .footer__theme-icon--active {
-    color: var(--btn-success-bgcolor);
+    color: var(--green-74);
 }
 
 .footer__themes {
