@@ -23,13 +23,21 @@ const linksData = [
     },
 ];
 
-const Footer = () => {
+type FooterProps = {
+    /**
+     * localSettingsOnly makes the theme and language selectors only change
+     * this browser, for users that can't change the server profile (teachers).
+     */
+    localSettingsOnly?: boolean;
+};
+
+const Footer = ({ localSettingsOnly = false }: FooterProps) => {
     const { t } = useTranslation();
     const dispatch = useDispatch();
 
     const currentTheme = useSelector((state: RootState) => (state.dashboard ? state.dashboard.theme : THEMES.auto));
     const profileName = useSelector((state: RootState) => (state.dashboard ? state.dashboard.name : ''));
-    const isLoggedIn = profileName !== '';
+    const isLoggedIn = profileName !== '' && !localSettingsOnly;
     const [currentThemeLocal, setCurrentThemeLocal] = useState(THEMES.auto);
 
     const getYear = () => {

@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 import { RootState } from '../../../initialState';
+import { Logo } from '../../ui/svg/logo';
+import Footer from '../../ui/Footer';
+import Icons from '../../ui/Icons';
 import { fetchGameControlStatus, gameControlPost, GameControlStatus, GameLab } from './gamecontrolApi';
 import './GameControl.css';
 
@@ -39,7 +42,10 @@ const TeacherPanel: React.FC = () => {
     return (
         <div className="teacher-panel">
             <div className="teacher-panel__bar">
-                <div className="teacher-panel__title">Panel del Profesor</div>
+                <div className="teacher-panel__brand">
+                    <Logo className="header-brand-img teacher-panel__logo" />
+                    <span className="teacher-panel__title">Panel del Profesor</span>
+                </div>
                 <div>
                     {name && <span className="mr-3 text-muted">{name}</span>}
                     <a href="control/logout" className="btn btn-sm btn-outline-secondary">
@@ -48,7 +54,7 @@ const TeacherPanel: React.FC = () => {
                 </div>
             </div>
 
-            <div className="container pt-5 pb-5">
+            <div className="container pt-5 pb-5 teacher-panel__content">
                 {!status && <div>Cargando...</div>}
 
                 {status && !lab && (
@@ -174,6 +180,10 @@ const TeacherPanel: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <Footer localSettingsOnly />
+
+            <Icons />
         </div>
     );
 };
