@@ -7,14 +7,14 @@
 # and Linux amd64 hosts.
 #
 # Usage: run as root (or with sudo):
-#   curl -fsSL https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/scripts/install-escolar.sh | sh
+#   curl -fsSL https://updates.escolarapp.cl/install.sh | sh
 # or, if you already have the repo checked out:
 #   sudo sh scripts/install-escolar.sh
 
 set -e -f -u
 
-repo='JosuhaSanhueza/adguard_escolar'
-readonly repo
+update_host='https://updates.escolarapp.cl'
+readonly update_host
 
 log() {
 	echo "$1" 1>&2
@@ -57,8 +57,15 @@ case "$arch" in
 esac
 
 pkg_name="AdGuardHome_${os}_amd64.tar.gz"
-url="https://github.com/${repo}/raw/master/${pkg_name}"
+url="${update_host}/latest/${pkg_name}"
 readonly pkg_name url
+
+# signing_key is the public key release packages must be signed with.  It must
+# match defaultSigningKey in internal/updater/signature.go.
+signing_key='-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAaadffatSWma6HEJPN3uVcpKDIxFhnltcZGaQM2jWmSM=
+-----END PUBLIC KEY-----'
+readonly signing_key
 
 log "installing AdGuard Escolar (${os}/amd64) into ${install_dir}"
 
@@ -66,16 +73,46 @@ tmp_dir="$(mktemp -d)"
 readonly tmp_dir
 trap 'rm -rf "$tmp_dir"' EXIT
 
+# download URL FILE downloads URL into FILE.
+download() {
+	if command -v curl >/dev/null 2>&1; then
+		curl -fL -o "$2" "$1"
+	elif command -v fetch >/dev/null 2>&1; then
+		fetch -o "$2" "$1"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -O "$2" "$1"
+	else
+		error_exit 'curl, fetch, or wget is required to run this script'
+	fi
+}
+
+# verify_package FILE checks FILE against its detached signature FILE.sig.  The
+# signed message is the same one the built-in updater checks, see
+# SignedMessage in internal/updater/signature.go.
+verify_package() {
+	if ! command -v openssl >/dev/null 2>&1; then
+		error_exit 'openssl is required to verify the package signature'
+	fi
+
+	printf '%s\n' "$signing_key" > "${tmp_dir}/signing_key.pem"
+	openssl base64 -d -A -in "${1}.sig" -out "${1}.sig.bin"
+
+	sum="$(openssl dgst -sha256 -r "$1" | cut -d ' ' -f 1)"
+	printf 'escolarapp-shield-update-v1\n%s\n' "$sum" > "${1}.msg"
+
+	if ! openssl pkeyutl -verify -pubin -inkey "${tmp_dir}/signing_key.pem" \
+		-rawin -in "${1}.msg" -sigfile "${1}.sig.bin" >/dev/null 2>&1
+	then
+		error_exit 'the package signature is not valid; refusing to install it'
+	fi
+}
+
 log "downloading ${url}"
-if command -v curl >/dev/null 2>&1; then
-	curl -fL -o "${tmp_dir}/${pkg_name}" "$url"
-elif command -v fetch >/dev/null 2>&1; then
-	fetch -o "${tmp_dir}/${pkg_name}" "$url"
-elif command -v wget >/dev/null 2>&1; then
-	wget -O "${tmp_dir}/${pkg_name}" "$url"
-else
-	error_exit 'curl, fetch, or wget is required to run this script'
-fi
+download "$url" "${tmp_dir}/${pkg_name}"
+download "${url}.sig" "${tmp_dir}/${pkg_name}.sig"
+
+log 'verifying the package signature'
+verify_package "${tmp_dir}/${pkg_name}"
 
 log 'unpacking'
 tar -C "$tmp_dir" -x -z -f "${tmp_dir}/${pkg_name}"

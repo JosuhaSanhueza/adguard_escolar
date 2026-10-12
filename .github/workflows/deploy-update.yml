@@ -1,0 +1,120 @@
+name: Deploy Update to updates.escolarapp.cl
+
+# Uploads the release in master (version.json plus the signed tarballs that
+# publish-update.yml committed with it) to the Cloudflare R2 bucket served at
+# https://updates.escolarapp.cl.  It runs when a release PR is merged, so
+# installed instances only see a new version after it has been reviewed.
+#
+# Layout of the bucket:
+#   /version.json                 what installed instances check (no cache)
+#   /install.sh                   scripts/install-escolar.sh (no cache)
+#   /latest/<package>[.sig]       what install.sh downloads (no cache)
+#   /<version>/<package>[.sig]    what version.json points to (immutable)
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'version.json'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BUCKET: escolarapp-shield-updates
+  PUBLIC_URL: https://updates.escolarapp.cl
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: auto
+  # R2 doesn't support the checksums that newer AWS CLI versions send by
+  # default.
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+
+      - name: Check the release
+        id: release
+        run: |
+          for s in R2_ACCOUNT_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "$(printenv "$s")" ]; then
+              echo "::error::Missing R2 credentials ($s): set the R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY secrets."
+              exit 1
+            fi
+          done
+
+          # Never upload packages the installed instances would reject.
+          go run ./scripts/update-signing verify \
+            AdGuardHome_linux_amd64.tar.gz \
+            AdGuardHome_freebsd_amd64.tar.gz
+
+          version=$(python3 -c "import json; print(json.load(open('version.json'))['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+
+      - name: Upload to R2
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          put() {
+            aws s3 cp --endpoint-url "$ENDPOINT" --no-progress \
+              --cache-control "$3" --content-type "$4" "$1" "s3://${BUCKET}/$2"
+          }
+
+          immutable='public, max-age=31536000, immutable'
+          fresh='no-cache'
+          gz='application/gzip'
+          txt='text/plain; charset=utf-8'
+
+          for os_name in linux freebsd; do
+            pkg="AdGuardHome_${os_name}_amd64.tar.gz"
+            put "$pkg" "${VERSION}/${pkg}" "$immutable" "$gz"
+            put "${pkg}.sig" "${VERSION}/${pkg}.sig" "$immutable" "$txt"
+            put "$pkg" "latest/${pkg}" "$fresh" "$gz"
+            put "${pkg}.sig" "latest/${pkg}.sig" "$fresh" "$txt"
+          done
+
+          put scripts/install-escolar.sh install.sh "$fresh" 'text/x-shellscript; charset=utf-8'
+
+          # Last, so instances only see the new version once its packages
+          # are in place.
+          put version.json version.json "$fresh" 'application/json'
+
+      - name: Check the public URLs
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -e
+          served=$(curl -fsS "${PUBLIC_URL}/version.json" | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
+          if [ "$served" != "$VERSION" ]; then
+            echo "::error::${PUBLIC_URL}/version.json serves ${served}, expected ${VERSION}"
+            exit 1
+          fi
+
+          mkdir -p check
+          for os_name in linux freebsd; do
+            pkg="AdGuardHome_${os_name}_amd64.tar.gz"
+            curl -fsS -o "check/${pkg}" "${PUBLIC_URL}/${VERSION}/${pkg}"
+            curl -fsS -o "check/${pkg}.sig" "${PUBLIC_URL}/${VERSION}/${pkg}.sig"
+            go run ./scripts/update-signing verify "check/${pkg}"
+          done
+
+          echo "::notice::${VERSION} is live at ${PUBLIC_URL}"

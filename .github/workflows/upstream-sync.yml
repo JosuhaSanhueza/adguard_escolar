@@ -84,47 +84,9 @@ jobs:
           echo "has_update=true" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Node.js
-        if: steps.sync.outputs.has_update == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Set up Go
-        if: steps.sync.outputs.has_update == 'true'
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26.5'
-
-      - name: Build Static Frontend & Re-generate Archives
-        if: steps.sync.outputs.has_update == 'true'
-        run: |
-          cd client
-          npm ci
-          npm run build-prod
-          cd ..
-
-          go build -o AdGuardHome main.go
-          GOOS=freebsd GOARCH=amd64 go build -o AdGuardHome_freebsd_amd64 main.go
-
-          rm -rf tmp_pkg
-          mkdir -p tmp_pkg/AdGuardHome
-          cp AdGuardHome tmp_pkg/AdGuardHome/AdGuardHome
-          cd tmp_pkg && tar -czvf ../AdGuardHome_linux_amd64.tar.gz AdGuardHome && cd ..
-
-          rm -rf tmp_pkg
-          mkdir -p tmp_pkg/AdGuardHome
-          cp AdGuardHome_freebsd_amd64 tmp_pkg/AdGuardHome/AdGuardHome
-          cd tmp_pkg && tar -czvf ../AdGuardHome_freebsd_amd64.tar.gz AdGuardHome && cd ..
-          rm -rf tmp_pkg
-
-      - name: Commit Updated Tarballs to Branch
-        if: steps.sync.outputs.has_update == 'true'
-        run: |
-          git add AdGuardHome_linux_amd64.tar.gz AdGuardHome_freebsd_amd64.tar.gz
-          git commit -m "chore(release): Auto-rebuild tarball packages after upstream sync" || true
-          git push origin "${{ steps.sync.outputs.branch }}"
-
+      # The release tarballs are not rebuilt here: they must be signed and
+      # shipped together with a version bump, which is what
+      # publish-update.yml does.  Run it after merging this PR.
       - name: Open Pull Request for Manual Review
         if: steps.sync.outputs.has_update == 'true'
         env:

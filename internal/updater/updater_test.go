@@ -56,9 +56,14 @@ func TestUpdater_Update(t *testing.T) {
 	pkgData, err := os.ReadFile("testdata/AdGuardHome_unix.tar.gz")
 	require.NoError(t, err)
 
+	testKey, testSig := newTestSignature(t, pkgData)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc(packagePath, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(pkgData)
+	})
+	mux.HandleFunc(packagePath+updater.SignatureSuffix, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(testSig)
 	})
 
 	versionPath := path.Join("/adguardhome", version.ChannelBeta, "version.json")
@@ -90,6 +95,7 @@ func TestUpdater_Update(t *testing.T) {
 		WorkDir:            wd,
 		ExecPath:           exePath,
 		VersionCheckURL:    versionCheckURL,
+		SigningKey:         testKey,
 	})
 
 	ctx := testutil.ContextWithTimeout(t, testTimeout)
