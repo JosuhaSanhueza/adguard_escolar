@@ -35,6 +35,8 @@
     --alert-message-bg: #dae5f5;
     --checkbox-bg: #e2e2e2;
     --radio-bg: #ffffff;
+    --brand: #4F46E5;
+    --brand-light: #818CF8;
 }
 
 [data-theme='dark'] {
@@ -69,6 +71,13 @@
     --alert-message-bg: #363648;
     --checkbox-bg: #a4a4a4;
     --radio-bg: #a4a4a4;
+    --green-74: #818CF8;
+    --green-86: #A5B4FC;
+}
+
+[data-theme='dark'] a:not(.btn):not(.nav-link):not(.dropdown-item),
+[data-theme='dark'] .btn-link {
+    color: var(--brand-light);
 }
 
 body {

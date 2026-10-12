@@ -1,12 +1,12 @@
 .nav-tabs .nav-link.active {
-    border-color: var(--btn-success-bgcolor);
-    color: var(--btn-success-bgcolor);
+    border-color: var(--green-74);
+    color: var(--green-74);
     background: transparent;
 }
 
 .nav-tabs .nav-link.active:hover {
-    border-color: #4b9400;
-    color: #4b9400;
+    border-color: var(--green-86);
+    color: var(--green-86);
 }
 
 .nav-icon {
@@ -23,7 +23,7 @@
 
 .nav-tabs .nav-link.active:hover .nav-icon,
 .nav-tabs .nav-item.show:hover .nav-icon {
-    stroke: #58a273;
+    stroke: var(--green-86);
 }
 
 .nav-tabs .nav-link {
