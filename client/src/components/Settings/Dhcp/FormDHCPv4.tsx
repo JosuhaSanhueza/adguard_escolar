@@ -195,7 +195,7 @@ const FormDHCPv4 = ({ processingConfig, ipv4placeholders, interfaces, onSubmit }
                 <button
                     data-testid="v4_save"
                     type="submit"
-                    className="btn btn-success btn-standard"
+                    className="btn btn-primary btn-standard"
                     disabled={isDisabled}>
                     {t('save_config')}
                 </button>

@@ -202,7 +202,7 @@ export const Form = ({ initialValues, processing, processingReset, onSubmit, onR
                 <button
                     type="submit"
                     data-testid="stats_config_save"
-                    className="btn btn-success btn-standard btn-large"
+                    className="btn btn-primary btn-standard btn-large"
                     disabled={disableSubmit}>
                     <Trans>save_btn</Trans>
                 </button>

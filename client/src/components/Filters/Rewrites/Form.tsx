@@ -126,7 +126,7 @@ const Form = ({ processingAdd, currentRewrite, toggleRewritesModal, onSubmit }: 
                     <button
                         type="submit"
                         data-testid="rewrites_save"
-                        className="btn btn-success btn-standard"
+                        className="btn btn-primary btn-standard"
                         disabled={isSubmitting || !isDirty || processingAdd}>
                         <Trans>save_btn</Trans>
                     </button>

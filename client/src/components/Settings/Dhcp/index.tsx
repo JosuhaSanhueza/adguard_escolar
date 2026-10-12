@@ -212,7 +212,7 @@ const Dhcp = () => {
 
         const className = classNames('btn btn-sm', {
             'btn-gray': enabled,
-            'btn-outline-success': !enabled,
+            'btn-outline-primary': !enabled,
         });
 
         const onClickDisable = () => dispatch(toggleDhcp({ enabled }));
@@ -361,7 +361,7 @@ const Dhcp = () => {
                                 <div className="btn-list mt-2">
                                     <button
                                         type="button"
-                                        className="btn btn-success btn-standard mt-3"
+                                        className="btn btn-primary btn-standard mt-3"
                                         onClick={toggleModal}
                                         disabled={disabledLeasesButton}>
                                         <Trans>dhcp_add_static_lease</Trans>

@@ -72,7 +72,7 @@ const Dashboard = ({
 
     const buttonClass = classNames('btn btn-sm dashboard-protection-button', {
         'btn-gray': protectionEnabled,
-        'btn-success': !protectionEnabled,
+        'btn-primary': !protectionEnabled,
     });
 
     const refreshButton = (

@@ -181,7 +181,7 @@ export const Form = ({
                 <button
                     type="submit"
                     data-testid="blocked_services_save"
-                    className="btn btn-success btn-standard btn-large"
+                    className="btn btn-primary btn-standard btn-large"
                     disabled={isSubmitDisabled}>
                     <Trans>save_btn</Trans>
                 </button>

@@ -381,7 +381,7 @@ const Form = ({ processing, initialValues, onSubmit }: Props) => {
             <button
                 type="submit"
                 data-testid="dns_config_save"
-                className="btn btn-success btn-standard btn-large"
+                className="btn btn-primary btn-standard btn-large"
                 disabled={isSubmitting || processing}>
                 {t('save_btn')}
             </button>

@@ -343,7 +343,7 @@ const Form = ({ initialValues, onSubmit }: FormProps) => {
                     <button
                         type="submit"
                         data-testid="dns_upstream_save"
-                        className="btn btn-success btn-standard"
+                        className="btn btn-primary btn-standard"
                         disabled={isSubmitting || processingSetConfig || processingTestUpstream}>
                         {t('apply_btn')}
                     </button>

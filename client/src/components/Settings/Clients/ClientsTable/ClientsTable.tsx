@@ -394,7 +394,7 @@ const ClientsTable = ({
 
                 <button
                     type="button"
-                    className="btn btn-success btn-standard mt-3"
+                    className="btn btn-primary btn-standard mt-3"
                     onClick={() => toggleClientModal(MODAL_TYPE.ADD_FILTERS)}
                     disabled={processingAdding}>
                     <Trans>client_add</Trans>

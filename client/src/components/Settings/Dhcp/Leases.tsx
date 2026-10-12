@@ -42,7 +42,7 @@ class Leases extends Component<LeasesProps> {
             <div className="logs__row logs__row--center">
                 <button
                     type="button"
-                    className="btn btn-icon btn-icon--green btn-outline-success btn-sm"
+                    className="btn btn-icon btn-icon--green btn-outline-primary btn-sm"
                     title={t('make_static')}
                     onClick={this.convertToStatic(row)}
                     disabled={disabledLeasesButton}>

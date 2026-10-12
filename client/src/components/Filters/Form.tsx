@@ -71,7 +71,7 @@ export const Form = ({
                         <div className="d-flex justify-content-around">
                             <button
                                 onClick={openFilteringListModal}
-                                className="btn btn-success btn-standard mr-2 btn-large">
+                                className="btn btn-primary btn-standard mr-2 btn-large">
                                 {t('choose_from_list')}
                             </button>
 
@@ -140,7 +140,7 @@ export const Form = ({
                         <button
                             type="submit"
                             data-testid="filters_save"
-                            className="btn btn-success"
+                            className="btn btn-primary"
                             disabled={processingAddFilter || processingConfigFilter}>
                             {t('save_btn')}
                         </button>

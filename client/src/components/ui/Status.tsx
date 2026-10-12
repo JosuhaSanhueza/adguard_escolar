@@ -16,7 +16,7 @@ const Status = ({ message, buttonMessage, reloadPage }: StatusProps) => (
                 <Trans>{message}</Trans>
             </div>
             {buttonMessage && (
-                <button className="btn btn-success" onClick={reloadPage}>
+                <button className="btn btn-primary" onClick={reloadPage}>
                     <Trans>{buttonMessage}</Trans>
                 </button>
             )}

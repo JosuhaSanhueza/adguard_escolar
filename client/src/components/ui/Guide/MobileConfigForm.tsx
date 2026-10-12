@@ -19,7 +19,7 @@ import { Select } from '../Controls/Select';
 const getDownloadLink = (host: string, clientId: string, protocol: string, invalid: boolean) => {
     if (!host || invalid) {
         return (
-            <button type="button" className="btn btn-success btn-standard btn-large disabled">
+            <button type="button" className="btn btn-primary btn-standard btn-large disabled">
                 {i18next.t('download_mobileconfig')}
             </button>
         );
@@ -34,7 +34,7 @@ const getDownloadLink = (host: string, clientId: string, protocol: string, inval
     return (
         <a
             href={getPathWithQueryString(protocol, linkParams)}
-            className={cn('btn btn-success btn-standard btn-large')}
+            className={cn('btn btn-primary btn-standard btn-large')}
             download>
             {i18next.t('download_mobileconfig')}
         </a>

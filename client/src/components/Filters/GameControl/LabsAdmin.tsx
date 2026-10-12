@@ -129,7 +129,7 @@ const LabsAdmin: React.FC<LabsAdminProps> = ({ labs, onChanged }) => {
                     <div className="d-flex flex-wrap align-items-start">
                         {labFields(newLab, (patch) => setNewLab({ ...newLab, ...patch }))}
                         <button
-                            className="btn btn-success mb-2"
+                            className="btn btn-primary mb-2"
                             onClick={() => run('labs/save', newLab, 'Laboratorio agregado.', () => setNewLab(emptyLab))}>
                             Agregar
                         </button>
@@ -219,7 +219,7 @@ const LabsAdmin: React.FC<LabsAdminProps> = ({ labs, onChanged }) => {
                                 ))}
                             </select>
                             <button
-                                className="btn btn-success mb-2"
+                                className="btn btn-primary mb-2"
                                 onClick={() =>
                                     run('teachers/save', newTeacher, 'Profesor creado.', () =>
                                         setNewTeacher({ login: '', password: '', lab_id: '' }),

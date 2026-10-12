@@ -565,7 +565,7 @@ export const Form = ({
             </div>
 
             <div className="btn-list mt-2">
-                <button type="submit" disabled={isDisabled} className="btn btn-success btn-standart">
+                <button type="submit" disabled={isDisabled} className="btn btn-primary btn-standart">
                     <Trans>save_config</Trans>
                 </button>
 
