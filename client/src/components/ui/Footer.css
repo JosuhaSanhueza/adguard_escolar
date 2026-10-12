@@ -106,3 +106,9 @@
         text-align: left;
     }
 }
+
+.footer__license {
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.75;
+}

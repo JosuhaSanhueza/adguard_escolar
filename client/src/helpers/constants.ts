@@ -59,6 +59,14 @@ export const STATUS_COLORS = {
     yellow: '#f1c40f',
 };
 
+export const BRAND = {
+    NAME: 'EscolarApp',
+    PRODUCT: 'EscolarApp Shield',
+    URL: 'https://escolarapp.cl',
+    UPSTREAM_URL: 'https://github.com/AdguardTeam/AdGuardHome',
+    LICENSE_URL: 'https://www.gnu.org/licenses/gpl-3.0.html',
+};
+
 export const REPOSITORY = {
     URL: 'https://github.com/AdguardTeam/AdGuardHome',
     TRACKERS_DB: 'https://github.com/AdguardTeam/AdGuardHome/tree/master/client/src/helpers/trackers/trackers.json',

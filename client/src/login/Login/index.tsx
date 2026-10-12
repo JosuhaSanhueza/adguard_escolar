@@ -31,7 +31,7 @@ export const Login = () => {
         <div className="login">
             <div className="login__form">
                 <div className="text-center mb-6">
-                    <Logo className="h-6 login__logo" />
+                    <Logo className="login__logo" />
                 </div>
 
                 <Form onSubmit={handleSubmit} processing={processingLogin} />

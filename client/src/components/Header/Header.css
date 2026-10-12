@@ -70,7 +70,8 @@
 }
 
 .header-brand-img {
-    height: 24px;
+    height: 30px;
+    width: auto;
 }
 
 .nav-tabs .nav-item.show .nav-link {

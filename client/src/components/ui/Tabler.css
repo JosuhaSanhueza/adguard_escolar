@@ -10432,8 +10432,20 @@ body.fixed-header .header {
     width: auto;
 }
 
+.header-brand-img {
+    color: #0F172A;
+}
+
 [data-theme='dark'] .header-brand-img {
-    filter: invert(1);
+    color: #FFFFFF;
+}
+
+[data-theme='dark'] .header-brand-img .logo__app {
+    fill: #818CF8;
+}
+
+[data-theme='dark'] .header-brand-img .logo__product {
+    fill: #94A3B8;
 }
 
 .header-avatar {
