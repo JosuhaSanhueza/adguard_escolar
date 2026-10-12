@@ -1,7 +1,7 @@
 {
-  "version": "v1.1.14",
-  "announcement": "Laboratorios modulares y cuentas de profesor con panel simple",
-  "announcement_url": "https://github.com/JosuhaSanhueza/adguard_escolar",
-  "download_linux_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_linux_amd64.tar.gz",
-  "download_freebsd_amd64": "https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/AdGuardHome_freebsd_amd64.tar.gz"
+  "version": "v1.1.15",
+  "announcement": "Nueva marca EscolarApp Shield y actualizaciones firmadas",
+  "announcement_url": "https://escolarapp.cl",
+  "download_linux_amd64": "https://updates.escolarapp.cl/v1.1.15/AdGuardHome_linux_amd64.tar.gz",
+  "download_freebsd_amd64": "https://updates.escolarapp.cl/v1.1.15/AdGuardHome_freebsd_amd64.tar.gz"
 }
