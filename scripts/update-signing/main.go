@@ -100,7 +100,6 @@ func sign(pkgs []string) {
 
 		fmt.Printf("signed %s\n", p)
 	}
-
 }
 
 func verify(pkgs []string) {
