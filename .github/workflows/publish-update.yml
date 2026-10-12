@@ -69,6 +69,13 @@ jobs:
 
           data["version"] = new_version
           data["announcement"] = os.environ["NEW_ANNOUNCEMENT"]
+          data["announcement_url"] = "https://escolarapp.cl"
+
+          # Every release lives under its own path on the release server, so
+          # caches never mix a package with the signature of another one.
+          base = f"https://updates.escolarapp.cl/{new_version}"
+          for os_name in ("linux", "freebsd"):
+              data[f"download_{os_name}_amd64"] = f"{base}/AdGuardHome_{os_name}_amd64.tar.gz"
 
           with open("version.json", "w") as f:
               json.dump(data, f, indent=2)
@@ -173,5 +180,5 @@ jobs:
             --base master \
             --head "${{ steps.commit.outputs.branch }}" \
             --title "release: Publish ${NEW_VERSION}" \
-            --body "Bumps version.json to ${NEW_VERSION} and rebuilds and signs both release tarballs with that version baked in, as a single change. Review and merge manually." \
+            --body "Bumps version.json to ${NEW_VERSION} and rebuilds and signs both release tarballs with that version baked in, as a single change. Merging it uploads the release to updates.escolarapp.cl (deploy-update.yml)." \
             || echo "PR may already exist for this branch."

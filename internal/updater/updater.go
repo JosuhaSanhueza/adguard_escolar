@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,12 +73,16 @@ type Updater struct {
 	prevCheckResult VersionInfo
 }
 
+// UpdateHost is the host serving EscolarApp Shield releases and their version
+// announcement.  It doesn't depend on the source repository being public.
+const UpdateHost = "updates.escolarapp.cl"
+
 // DefaultVersionURL returns the default URL for the version announcement.
 func DefaultVersionURL() *url.URL {
 	return &url.URL{
 		Scheme: urlutil.SchemeHTTPS,
-		Host:   "raw.githubusercontent.com",
-		Path:   path.Join("JosuhaSanhueza", "adguard_escolar", "master", "version.json"),
+		Host:   UpdateHost,
+		Path:   "/version.json",
 	}
 }
 

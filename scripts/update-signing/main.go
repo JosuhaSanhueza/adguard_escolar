@@ -5,11 +5,13 @@
 //
 //	update-signing genkey PRIVATE_KEY_FILE
 //	UPDATE_SIGNING_KEY=... update-signing sign PACKAGE...
+//	update-signing verify PACKAGE...
 //
 // genkey writes a new private key to PRIVATE_KEY_FILE (mode 0600) and prints
 // the matching public key, which goes into internal/updater/signature.go.  sign
 // writes PACKAGE.sig next to every PACKAGE using the private key from the
-// UPDATE_SIGNING_KEY environment variable, and checks the result.
+// UPDATE_SIGNING_KEY environment variable, and checks the result.  verify
+// checks every PACKAGE against PACKAGE.sig with the built-in public key.
 package main
 
 import (
@@ -25,7 +27,7 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fail("usage: update-signing genkey PRIVATE_KEY_FILE | update-signing sign PACKAGE...")
+		fail("usage: update-signing genkey KEY_FILE | sign PACKAGE... | verify PACKAGE...")
 	}
 
 	switch os.Args[1] {
@@ -33,6 +35,8 @@ func main() {
 		genKey(os.Args[2])
 	case "sign":
 		sign(os.Args[2:])
+	case "verify":
+		verify(os.Args[2:])
 	default:
 		fail("unknown command %q", os.Args[1])
 	}
@@ -97,4 +101,25 @@ func sign(pkgs []string) {
 		fmt.Printf("signed %s\n", p)
 	}
 
+}
+
+func verify(pkgs []string) {
+	for _, p := range pkgs {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			fail("reading %s: %s", p, err)
+		}
+
+		sig, err := os.ReadFile(p + updater.SignatureSuffix)
+		if err != nil {
+			fail("reading signature: %s", err)
+		}
+
+		err = updater.VerifyPackage(updater.DefaultSigningKey(), data, sig)
+		if err != nil {
+			fail("%s: %s", p, err)
+		}
+
+		fmt.Printf("verified %s\n", p)
+	}
 }

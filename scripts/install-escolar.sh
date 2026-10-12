@@ -7,14 +7,14 @@
 # and Linux amd64 hosts.
 #
 # Usage: run as root (or with sudo):
-#   curl -fsSL https://github.com/JosuhaSanhueza/adguard_escolar/raw/master/scripts/install-escolar.sh | sh
+#   curl -fsSL https://updates.escolarapp.cl/install.sh | sh
 # or, if you already have the repo checked out:
 #   sudo sh scripts/install-escolar.sh
 
 set -e -f -u
 
-repo='JosuhaSanhueza/adguard_escolar'
-readonly repo
+update_host='https://updates.escolarapp.cl'
+readonly update_host
 
 log() {
 	echo "$1" 1>&2
@@ -57,7 +57,7 @@ case "$arch" in
 esac
 
 pkg_name="AdGuardHome_${os}_amd64.tar.gz"
-url="https://github.com/${repo}/raw/master/${pkg_name}"
+url="${update_host}/latest/${pkg_name}"
 readonly pkg_name url
 
 # signing_key is the public key release packages must be signed with.  It must
