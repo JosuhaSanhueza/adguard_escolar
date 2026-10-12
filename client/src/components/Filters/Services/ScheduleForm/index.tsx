@@ -107,8 +107,8 @@ export const ScheduleForm = ({ schedule, onScheduleSubmit, clientForm }: Schedul
                 type="button"
                 className={cn(
                     'btn',
-                    { 'btn-outline-success btn-sm': clientForm },
-                    { 'btn-success btn-standard': !clientForm },
+                    { 'btn-outline-primary btn-sm': clientForm },
+                    { 'btn-primary btn-standard': !clientForm },
                 )}
                 onClick={onAdd}>
                 {t('schedule_new')}

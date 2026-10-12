@@ -172,7 +172,7 @@ export const Modal = ({ isOpen, currentDay, schedule, onClose, onSubmit }: Modal
                         <div className="btn-list">
                             <button
                                 type="button"
-                                className="btn btn-success btn-standard"
+                                className="btn btn-primary btn-standard"
                                 disabled={days.size === 0 || wrongPeriod}
                                 onClick={onFormSubmit}>
                                 {currentDay ? t('schedule_save') : t('schedule_add')}

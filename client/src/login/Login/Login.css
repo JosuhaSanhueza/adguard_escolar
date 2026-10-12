@@ -15,8 +15,24 @@
     min-height: 100vh;
 }
 
+.login__logo {
+    display: block;
+    height: 44px;
+    width: auto;
+    margin: 0 auto;
+    color: #0F172A;
+}
+
 [data-theme='dark'] .login__logo {
-    filter: invert(1);
+    color: #FFFFFF;
+}
+
+[data-theme='dark'] .login__logo .logo__app {
+    fill: #818CF8;
+}
+
+[data-theme='dark'] .login__logo .logo__product {
+    fill: #94A3B8;
 }
 
 .login__form {

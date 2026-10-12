@@ -211,7 +211,7 @@ export const Form = ({
 
                         <button
                             type="submit"
-                            className="btn btn-success btn-standard"
+                            className="btn btn-primary btn-standard"
                             disabled={isSubmitting || !isValid || processingAdding || processingUpdating}>
                             <Trans>save_btn</Trans>
                         </button>

@@ -112,7 +112,7 @@ class Rewrites extends Component<RewritesProps> {
                             <button
                                 data-testid="add-rewrite"
                                 type="button"
-                                className="btn btn-success btn-standard  mr-2"
+                                className="btn btn-primary btn-standard  mr-2"
                                 onClick={() => toggleRewritesModal({ type: MODAL_TYPE.ADD_REWRITE })}
                                 disabled={processingAdd}>
                                 <Trans>rewrite_add</Trans>

@@ -161,7 +161,7 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
             <button
                 type="submit"
                 data-testid="dns_save"
-                className="btn btn-success btn-standard btn-large"
+                className="btn btn-primary btn-standard btn-large"
                 disabled={isSubmitting || processingSetConfig || minExceedsMax || cacheSizeZeroWhenEnabled}>
                 {t('save_btn')}
             </button>

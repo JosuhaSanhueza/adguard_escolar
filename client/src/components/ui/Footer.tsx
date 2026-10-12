@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import cn from 'classnames';
 
-import { REPOSITORY, PRIVACY_POLICY_LINK, THEMES } from '../../helpers/constants';
+import { BRAND, THEMES } from '../../helpers/constants';
 import { LANGUAGES } from '../../helpers/twosky';
 import i18n from '../../i18n';
 
@@ -18,17 +18,8 @@ import { RootState } from '../../initialState';
 
 const linksData = [
     {
-        href: REPOSITORY.URL,
+        href: BRAND.URL,
         name: 'homepage',
-    },
-    {
-        href: PRIVACY_POLICY_LINK,
-        name: 'privacy_policy',
-    },
-    {
-        href: REPOSITORY.ISSUES,
-        className: 'btn btn-outline-primary btn-sm footer__link--report',
-        name: 'report_an_issue',
     },
 ];
 
@@ -68,12 +59,20 @@ const Footer = () => {
         <div className="footer__column">
             <div className="footer__copyright">
                 {t('copyright')} &copy; {getYear()}{' '}
-                <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href="https://link.adtidy.org/forward.html?action=home&from=ui&app=home">
-                    AdGuard
+                <a target="_blank" rel="noopener noreferrer" href={BRAND.URL}>
+                    {BRAND.NAME}
                 </a>
+                <div className="footer__license">
+                    Basado en{' '}
+                    <a target="_blank" rel="noopener noreferrer" href={BRAND.UPSTREAM_URL}>
+                        AdGuard Home
+                    </a>{' '}
+                    &copy; AdGuard Software Ltd. Software libre bajo licencia{' '}
+                    <a target="_blank" rel="noopener noreferrer" href={BRAND.LICENSE_URL}>
+                        GNU GPLv3
+                    </a>
+                    , sin garantía. El código fuente está disponible a solicitud.
+                </div>
             </div>
         </div>
     );

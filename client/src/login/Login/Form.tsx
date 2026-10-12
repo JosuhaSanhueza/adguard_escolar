@@ -76,7 +76,7 @@ const Form = ({ onSubmit, processing }: LoginFormProps) => {
                     <button
                         data-testid="sign_in"
                         type="submit"
-                        className="btn btn-success btn-block"
+                        className="btn btn-primary btn-block"
                         disabled={processing || !isValid}>
                         {t('sign_in')}
                     </button>

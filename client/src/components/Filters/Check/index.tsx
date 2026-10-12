@@ -96,7 +96,7 @@ const Check = ({ onSubmit }: Props) => {
                         />
 
                         <button
-                            className="btn btn-success btn-standard btn-large"
+                            className="btn btn-primary btn-standard btn-large"
                             type="submit"
                             data-testid="check_domain_submit"
                             disabled={!isValid || processingCheck}

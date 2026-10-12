@@ -131,7 +131,7 @@ const Form = ({ initialValues, onSubmit, processingSet }: FormProps) => {
                     <button
                         type="submit"
                         data-testid="access_save"
-                        className="btn btn-success btn-standard"
+                        className="btn btn-primary btn-standard"
                         disabled={isSubmitting || processingSet}>
                         {t('save_config')}
                     </button>

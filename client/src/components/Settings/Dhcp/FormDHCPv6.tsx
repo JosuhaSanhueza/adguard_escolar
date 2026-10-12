@@ -131,7 +131,7 @@ const FormDHCPv6 = ({ processingConfig, ipv6placeholders, interfaces, onSubmit }
                 <button
                     data-testid="v6_save"
                     type="submit"
-                    className="btn btn-success btn-standard"
+                    className="btn btn-primary btn-standard"
                     disabled={isDisabled}>
                     {t('save_config')}
                 </button>

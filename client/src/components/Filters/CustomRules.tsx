@@ -93,7 +93,7 @@ class CustomRules extends Component<CustomRulesProps> {
                         <div className="card-actions">
                             <button
                                 data-testid="apply_custom_rule"
-                                className="btn btn-success btn-standard btn-large"
+                                className="btn btn-primary btn-standard btn-large"
                                 type="submit"
                                 onClick={this.handleSubmit}>
                                 <Trans>apply_btn</Trans>

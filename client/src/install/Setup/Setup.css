@@ -44,11 +44,23 @@
 .setup__logo {
     display: block;
     margin: 0 auto 40px;
-    max-width: 140px;
+    max-width: 260px;
+}
+
+.setup__logo {
+    color: #0F172A;
 }
 
 [data-theme='dark'] .setup__logo {
-    filter: invert(1);
+    color: #FFFFFF;
+}
+
+[data-theme='dark'] .setup__logo .logo__app {
+    fill: #818CF8;
+}
+
+[data-theme='dark'] .setup__logo .logo__product {
+    fill: #94A3B8;
 }
 
 .setup__nav {

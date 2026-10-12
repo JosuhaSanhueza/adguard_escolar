@@ -127,7 +127,7 @@ export const Form = ({ initialValues, processingAdding, cidr, isEdit, onSubmit }
                     <button
                         type="submit"
                         data-testid="static_lease_save"
-                        className="btn btn-success btn-standard"
+                        className="btn btn-primary btn-standard"
                         disabled={isSubmitting || processingAdding || (!isDirty && !dynamicLease)}>
                         <Trans>save_btn</Trans>
                     </button>

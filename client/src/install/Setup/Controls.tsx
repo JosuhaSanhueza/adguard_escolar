@@ -53,7 +53,7 @@ class Controls extends Component<ControlsProps> {
                     <button
                         data-testid="install_get_started"
                         type="button"
-                        className="btn btn-success btn-lg setup__button"
+                        className="btn btn-primary btn-lg setup__button"
                         onClick={nextStep}>
                         <Trans>get_started</Trans>
                     </button>
@@ -64,7 +64,7 @@ class Controls extends Component<ControlsProps> {
                     <button
                         data-testid="install_next"
                         type="submit"
-                        className="btn btn-success btn-lg setup__button"
+                        className="btn btn-primary btn-lg setup__button"
                         disabled={invalid || pristine || install.processingSubmit}>
                         <Trans>next</Trans>
                     </button>
@@ -74,7 +74,7 @@ class Controls extends Component<ControlsProps> {
                     <button
                         data-testid="install_next"
                         type="button"
-                        className="btn btn-success btn-lg setup__button"
+                        className="btn btn-primary btn-lg setup__button"
                         onClick={nextStep}>
                         <Trans>next</Trans>
                     </button>
@@ -84,7 +84,7 @@ class Controls extends Component<ControlsProps> {
                     <button
                         data-testid="install_open_dashboard"
                         type="button"
-                        className="btn btn-success btn-lg setup__button"
+                        className="btn btn-primary btn-lg setup__button"
                         onClick={() => this.props.openDashboard(ip, port)}>
                         <Trans>open_dashboard</Trans>
                     </button>

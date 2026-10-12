@@ -49,7 +49,7 @@
 .basic-multi-select .select__control--is-focused,
 .basic-multi-select .select__control--is-focused:hover {
     border-color: #1991eb;
-    box-shadow: 0 0 0 2px rgba(70, 127, 207, 0.25);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.25);
 }
 
 .basic-multi-select .select__placeholder {
