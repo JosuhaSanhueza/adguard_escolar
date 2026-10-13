@@ -1,7 +1,7 @@
 {
-  "version": "v1.1.15",
-  "announcement": "Nueva marca EscolarApp Shield y actualizaciones firmadas",
+  "version": "v1.1.16",
+  "announcement": "Perfil de configuraci\u00f3n al instante, marca en panel del profesor y ajustes de color",
   "announcement_url": "https://escolarapp.cl",
-  "download_linux_amd64": "https://updates.escolarapp.cl/v1.1.15/AdGuardHome_linux_amd64.tar.gz",
-  "download_freebsd_amd64": "https://updates.escolarapp.cl/v1.1.15/AdGuardHome_freebsd_amd64.tar.gz"
+  "download_linux_amd64": "https://updates.escolarapp.cl/v1.1.16/AdGuardHome_linux_amd64.tar.gz",
+  "download_freebsd_amd64": "https://updates.escolarapp.cl/v1.1.16/AdGuardHome_freebsd_amd64.tar.gz"
 }
