@@ -7,12 +7,16 @@
 'permissions': {}
 'env':
   'GO_VERSION': '1.26.3'
+# EscolarApp Shield: CI runs on pull requests and on master only, and tests on
+# Linux only, to stay within the Actions minutes of a private repository
+# (macOS minutes count 10x and Windows 2x).  Releases are built by
+# publish-update.yml, not here.
 'on':
   'push':
     'tags':
       - 'v*'
     'branches':
-      - '*'
+      - 'master'
   'pull_request':
 'jobs':
   'go-lint':

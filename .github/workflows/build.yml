@@ -10,10 +10,14 @@
 'env':
   'GO_VERSION': '1.26.6'
   'NODE_VERSION': '20'
+# EscolarApp Shield: CI runs on pull requests and on master only, and tests on
+# Linux only, to stay within the Actions minutes of a private repository
+# (macOS minutes count 10x and Windows 2x).  Releases are built by
+# publish-update.yml, not here.
 'on':
   'push':
     'branches':
-      - '*'
+      - 'master'
     'tags':
       - 'v*'
   'pull_request':
@@ -30,8 +34,6 @@
       'matrix':
         'os':
           - 'ubuntu-latest'
-          - 'macOS-latest'
-          - 'windows-latest'
     'steps':
       - 'name': 'Checkout'
         'uses': 'actions/checkout@v2'
@@ -74,6 +76,9 @@
           'token': '${{ secrets.CODECOV_TOKEN }}'
           'file': './coverage.txt'
   'build-release':
+    # The full multi-platform AdGuard Home release build is only needed for
+    # upstream-style tag releases.
+    'if': "startsWith(github.ref, 'refs/tags/v')"
     'runs-on': 'ubuntu-latest'
     'needs': 'test'
     'permissions':
